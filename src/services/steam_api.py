@@ -102,13 +102,23 @@ class SteamAPI:
         
         # Розрахунок основних показників
         kills = stats_dict.get('total_kills', 0)
-        deaths = stats_dict.get('total_deaths', 1)  # уникаємо ділення на нуль
+        deaths = stats_dict.get('total_deaths', 0)
         headshot_kills = stats_dict.get('total_kills_headshot', 0)
-        shots_fired = stats_dict.get('total_shots_fired', 1)
+        shots_fired = stats_dict.get('total_shots_fired', 0)
         shots_hit = stats_dict.get('total_shots_hit', 0)
         wins = stats_dict.get('total_wins', 0)
-        matches = stats_dict.get('total_matches_played', 1)
+        matches = stats_dict.get('total_matches_played', 0)
         mvps = stats_dict.get('total_mvps', 0)
+        
+        # Захист від ділення на нуль
+        if deaths == 0:
+            deaths = 1
+        if matches == 0:
+            matches = 1
+        if shots_fired == 0:
+            shots_fired = 1
+        if kills == 0:
+            kills = 1
         
         parsed = {
             # Базові статистики
@@ -124,13 +134,13 @@ class SteamAPI:
             'matches_played': matches,
             'mvps': mvps,
             
-            # Розраховані показники
+            # Розраховані показники з обмеженнями
             'kd_ratio': round(kills / deaths, 2),
-            'win_rate': round((wins / matches) * 100, 1),
-            'headshot_percent': round((headshot_kills / kills) * 100, 1) if kills > 0 else 0,
-            'accuracy_percent': round((shots_hit / shots_fired) * 100, 1) if shots_fired > 0 else 0,
+            'win_rate': min(round((wins / matches) * 100, 1), 100.0),  # максимум 100%
+            'headshot_percent': min(round((headshot_kills / kills) * 100, 1), 100.0),  # максимум 100%
+            'accuracy_percent': min(round((shots_hit / shots_fired) * 100, 1), 100.0),  # максимум 100%
             'assists_per_match': round(stats_dict.get('total_kills_assist', 0) / matches, 1),
-            'mvp_percent': round((mvps / matches) * 100, 1) if matches > 0 else 0,
+            'mvp_percent': min(round((mvps / matches) * 100, 1), 100.0),  # максимум 100%
             'damage_per_match': round(stats_dict.get('total_damage_done', 0) / matches, 0) if matches > 0 else 0,
             
             # Додаткові статистики
@@ -200,7 +210,9 @@ class SteamAPI:
             mvp_score * weights["mvp_percent"]
         )
         
-        return round(impact_score * 100, 1)  # повертаємо в відсотках (0-100)
+        # Обмежуємо до 100 балів
+        final_score = min(round(impact_score * 100, 1), 100.0)
+        return final_score
 
     async def get_player_rank_info(self, steam_id: str) -> Optional[Dict[str, Any]]:
         """Спроба отримати інформацію про ранг гравця (може не працювати через обмеження API)"""

@@ -35,5 +35,19 @@ ENV PORT=8080
 # Відкриваємо порт для майбутніх можливостей (webhook, веб-інтерфейс)
 EXPOSE $PORT
 
+# Створюємо скрипт для запуску з перевіркою змінних
+RUN echo '#!/bin/bash\n\
+echo "🔍 Checking environment variables..."\n\
+if [ -z "$TELEGRAM_BOT_TOKEN" ]; then\n\
+    echo "❌ TELEGRAM_BOT_TOKEN not set"\n\
+    exit 1\n\
+fi\n\
+if [ -z "$STEAM_API_KEY" ]; then\n\
+    echo "❌ STEAM_API_KEY not set"\n\
+    exit 1\n\
+fi\n\
+echo "✅ Environment variables OK"\n\
+exec python main.py' > /app/start.sh && chmod +x /app/start.sh
+
 # Команда запуску
-CMD ["python", "main.py"]
+CMD ["/app/start.sh"]

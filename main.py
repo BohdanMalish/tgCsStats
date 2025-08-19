@@ -102,6 +102,8 @@ def main():
     application.add_handler(CommandHandler("report_settings", bot_handlers.report_settings_command))
     application.add_handler(CommandHandler("about", bot_handlers.about_command))
     application.add_handler(CommandHandler("gsi_stats", bot_handlers.gsi_stats_command))
+    application.add_handler(CommandHandler("steam_login", bot_handlers.steam_login_command))
+    application.add_handler(CommandHandler("steam_manual", bot_handlers.steam_manual_command))
     
     # Обробник помилок
     application.add_error_handler(error_handler)

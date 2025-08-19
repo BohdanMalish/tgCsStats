@@ -13,10 +13,12 @@ from ..services.daily_reports import DailyReportsService
 
 
 class BotHandlers:
-    def __init__(self, user_db: UserDatabase, steam_api: SteamAPI, daily_reports_service: DailyReportsService = None):
+    def __init__(self, user_db: UserDatabase, steam_api: SteamAPI, daily_reports_service: DailyReportsService = None, app_domain: str = None, steam_api_key: str = None):
         self.user_db = user_db
         self.steam_api = steam_api
         self.daily_reports_service = daily_reports_service
+        self.app_domain = app_domain or "your-app.railway.app"
+        self.steam_api_key = steam_api_key or "YOUR_STEAM_API_KEY"
 
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обробник команди /start"""
@@ -685,14 +687,13 @@ class BotHandlers:
         try:
             from ..services.steam_oauth import SteamOAuth
             
-            # TODO: Отримати API ключ та домен з конфігурації
             steam_oauth = SteamOAuth(
-                api_key="YOUR_STEAM_API_KEY",  # Замінити на реальний ключ
-                app_domain="your-app.railway.app"  # Замінити на реальний домен
+                api_key=self.steam_api_key,  # Використовуємо API ключ з конструктора
+                app_domain=self.app_domain  # Використовуємо домен з конструктора
             )
             
             # Генеруємо return URL
-            return_url = f"https://your-app.railway.app/steam/callback?user_id={user_id}"
+            return_url = f"https://{self.app_domain}/steam/callback?user_id={user_id}"
             login_url = steam_oauth.generate_login_url(return_url)
             
             login_text = f"""

@@ -22,6 +22,8 @@ STEAM_API_KEY = "6629403219DD2ADCA0D3F552F03F92A8"
 DATABASE_PATH = os.getenv("DATABASE_PATH", "/app/data/bot_database.db")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 DAILY_REPORT_TIME = os.getenv("DAILY_REPORT_TIME", "10:00")
+APP_DOMAIN = os.getenv("APP_DOMAIN", "your-app.railway.app")
+PORT = int(os.getenv("PORT", "3000"))
 
 print("🔧 Using hardcoded API keys for testing")
 
@@ -58,7 +60,9 @@ def main():
     # Діагностика змінних оточення
     logger.info(f"🔍 Діагностика змінних оточення:")
     logger.info(f"   TELEGRAM_BOT_TOKEN: {'✅ Встановлено' if TELEGRAM_BOT_TOKEN and TELEGRAM_BOT_TOKEN != 'YOUR_BOT_TOKEN' else '❌ Не встановлено'}")
-    logger.info(f"   STEAM_API_KEY: {'✅ Встановлено' if STEAM_API_KEY and STEAM_API_KEY != 'YOUR_STEAM_API_KEY' else '❌ Не встановлено'}")
+    logger.info(f"   STEAM_API_KEY: {'✅ Встановлено в коді' if STEAM_API_KEY and STEAM_API_KEY != 'YOUR_STEAM_API_KEY' else '❌ Не встановлено'}")
+    logger.info(f"   APP_DOMAIN: {APP_DOMAIN}")
+    logger.info(f"   PORT: {PORT}")
     logger.info(f"   DATABASE_PATH: {DATABASE_PATH}")
     logger.info(f"   LOG_LEVEL: {LOG_LEVEL}")
     logger.info(f"   DAILY_REPORT_TIME: {DAILY_REPORT_TIME}")
@@ -69,7 +73,7 @@ def main():
         return
     
     if not STEAM_API_KEY or STEAM_API_KEY == "YOUR_STEAM_API_KEY":
-        logger.error("❌ Не встановлено STEAM_API_KEY! Перевір змінні оточення в Railway")
+        logger.error("❌ Не встановлено STEAM_API_KEY! Перевір код в main.py")
         return
     
     logger.info("🚀 Запускаю CS2 Stats Bot...")
@@ -83,7 +87,7 @@ def main():
     
     # Ініціалізуємо сервіс щоденних звітів
     daily_reports_service = DailyReportsService(user_db, steam_api, application.bot)
-    bot_handlers = BotHandlers(user_db, steam_api, daily_reports_service)
+    bot_handlers = BotHandlers(user_db, steam_api, daily_reports_service, APP_DOMAIN, STEAM_API_KEY)
     
     # Ініціалізуємо планувальник
     scheduler = TaskScheduler(daily_reports_service)
@@ -132,17 +136,37 @@ def main():
         logger.warning(f"⚠️ Не вдалося запустити планувальник: {e}")
     
     # Запускаємо веб-сервер для Steam OAuth
+    web_server = None
     try:
         from src.web_server import WebServer
-        web_server = WebServer(bot_handlers)
+        web_server = WebServer(bot_handlers, STEAM_API_KEY, APP_DOMAIN, PORT)
         logger.info("🌐 Веб-сервер для Steam OAuth готовий")
+        
     except Exception as e:
         logger.warning(f"⚠️ Не вдалося налаштувати веб-сервер: {e}")
     
     # Запускаємо бота
     try:
         logger.info("🎮 Бот запущено! Натисни Ctrl+C для зупинки")
-        application.run_polling(allowed_updates=['message', 'callback_query'])
+        
+        # Запускаємо веб-сервер якщо він створений
+        if web_server:
+            async def run_bot_with_web_server():
+                # Запускаємо веб-сервер в окремому завданні
+                web_server_task = asyncio.create_task(web_server.start_server())
+                logger.info(f"🌐 Веб-сервер запущено на порту {PORT}")
+                
+                # Запускаємо бота
+                bot_task = asyncio.create_task(application.run_polling(allowed_updates=['message', 'callback_query']))
+                
+                # Чекаємо на завершення обох завдань
+                await asyncio.gather(web_server_task, bot_task)
+            
+            asyncio.run(run_bot_with_web_server())
+        else:
+            # Запускаємо тільки бота
+            application.run_polling(allowed_updates=['message', 'callback_query'])
+            
     except KeyboardInterrupt:
         logger.info("🛑 Бот зупинено користувачем")
         scheduler.stop()

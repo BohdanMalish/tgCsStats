@@ -10,8 +10,10 @@ logger = logging.getLogger(__name__)
 
 
 class WebServer:
-    def __init__(self, bot_handlers, port: int = 3000):
+    def __init__(self, bot_handlers, steam_api_key: str, app_domain: str, port: int = 3000):
         self.bot_handlers = bot_handlers
+        self.steam_api_key = steam_api_key
+        self.app_domain = app_domain
         self.port = port
         self.app = web.Application()
         self.app.router.add_get('/steam/callback', self.handle_steam_callback)
@@ -56,8 +58,8 @@ class WebServer:
             # Перевіряємо Steam відповідь
             from .services.steam_oauth import SteamOAuth
             steam_oauth = SteamOAuth(
-                api_key="YOUR_STEAM_API_KEY",  # TODO: Отримати з конфігурації
-                app_domain="your-app.railway.app"  # TODO: Отримати з конфігурації
+                api_key=self.steam_api_key,  # Використовуємо API ключ з конструктора
+                app_domain=self.app_domain  # Використовуємо домен з конструктора
             )
             
             steam_id = await steam_oauth.verify_steam_response(steam_params)

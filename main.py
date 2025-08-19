@@ -105,6 +105,7 @@ def main():
     application.add_handler(CommandHandler("about", bot_handlers.about_command))
     application.add_handler(CommandHandler("debug_stats", bot_handlers.debug_stats_command))
     application.add_handler(CommandHandler("web_stats", bot_handlers.web_stats_command))
+    application.add_handler(CommandHandler("gsi_stats", bot_handlers.gsi_stats_command))
     
     # Обробник помилок
     application.add_error_handler(error_handler)

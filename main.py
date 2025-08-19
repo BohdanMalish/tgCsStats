@@ -16,25 +16,14 @@ from src.handlers.bot_handlers import BotHandlers
 # Конфігурація
 import os
 
-# Завжди використовуємо змінні оточення (для Railway/Docker)
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-STEAM_API_KEY = os.getenv("STEAM_API_KEY")
+# Хардкодимо змінні для тестування
+TELEGRAM_BOT_TOKEN = "8343208198:AAE3dC1er-xa9risTj26IEA6b-A4vPGjxWQ"
+STEAM_API_KEY = "6629403219DD2ADCA0D3F552F03F92A8"
 DATABASE_PATH = os.getenv("DATABASE_PATH", "/app/data/bot_database.db")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 DAILY_REPORT_TIME = os.getenv("DAILY_REPORT_TIME", "10:00")
 
-# Додаткова діагностика
-print(f"🔍 DEBUG: os.environ keys: {list(os.environ.keys())}")
-print(f"🔍 DEBUG: TELEGRAM_BOT_TOKEN exists: {'TELEGRAM_BOT_TOKEN' in os.environ}")
-print(f"🔍 DEBUG: STEAM_API_KEY exists: {'STEAM_API_KEY' in os.environ}")
-
-# Fallback для локальної розробки
-if not TELEGRAM_BOT_TOKEN:
-    try:
-        from config import TELEGRAM_BOT_TOKEN, STEAM_API_KEY
-    except ImportError:
-        TELEGRAM_BOT_TOKEN = "YOUR_BOT_TOKEN"
-        STEAM_API_KEY = "YOUR_STEAM_API_KEY"
+print("🔧 Using hardcoded API keys for testing")
 
 
 def setup_logging():

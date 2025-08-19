@@ -75,7 +75,11 @@ class WebServer:
                     steam_params[key] = value[0] if value else ''
             
             # Перевіряємо Steam відповідь
-            from .services.steam_oauth import SteamOAuth
+            try:
+                from .services.steam_oauth import SteamOAuth
+            except ImportError:
+                from src.services.steam_oauth import SteamOAuth
+            
             steam_oauth = SteamOAuth(
                 api_key=self.steam_api_key,  # Використовуємо API ключ з конструктора
                 app_domain=self.app_domain  # Використовуємо домен з конструктора
@@ -84,8 +88,16 @@ class WebServer:
             steam_id = await steam_oauth.verify_steam_response(steam_params)
             
             if steam_id:
-                # Зберігаємо Steam ID в базі даних
-                success = self.bot_handlers.user_db.update_steam_id(user_id, steam_id)
+                # Перевіряємо чи існує користувач
+                user = self.bot_handlers.user_db.get_user(user_id)
+                if not user:
+                    # Створюємо нового користувача
+                    from src.models.user import User
+                    new_user = User(telegram_id=user_id, steam_id=steam_id)
+                    success = self.bot_handlers.user_db.create_user(new_user)
+                else:
+                    # Оновлюємо існуючого користувача
+                    success = self.bot_handlers.user_db.update_steam_id(user_id, steam_id)
                 
                 if success:
                     # Отримуємо інформацію про гравця
@@ -124,4 +136,6 @@ class WebServer:
                 
         except Exception as e:
             logger.error(f"Помилка обробки Steam callback: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             return web.Response(text=f"❌ Помилка: {str(e)}", status=500)

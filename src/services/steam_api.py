@@ -153,8 +153,27 @@ class SteamAPI:
             'planted_bombs': stats_dict.get('total_planted_bombs', 0),
             'defused_bombs': stats_dict.get('total_defused_bombs', 0),
             
-            # Статистика по зброї (топ-3)
-            'weapon_stats': self._extract_weapon_stats(stats_dict)
+            # НОВІ ДЕТАЛЬНІ СТАТИСТИКИ
+            'dominations': stats_dict.get('total_dominations', 0),
+            'revenges': stats_dict.get('total_revenges', 0),
+            'enemy_weapon_kills': stats_dict.get('total_kills_enemy_weapon', 0),
+            'blinded_kills': stats_dict.get('total_kills_enemy_blinded', 0),
+            'knife_fight_kills': stats_dict.get('total_kills_knife_fight', 0),
+            'zoomed_sniper_kills': stats_dict.get('total_kills_against_zoomed_sniper', 0),
+            'weapons_donated': stats_dict.get('total_weapons_donated', 0),
+            'contribution_score': stats_dict.get('total_contribution_score', 0),
+            
+            # Статистика по картах
+            'map_stats': self._extract_map_stats(stats_dict),
+            
+            # Статистика по зброї (розширена)
+            'weapon_stats': self._extract_weapon_stats(stats_dict),
+            
+            # Статистика по режимах гри
+            'game_mode_stats': self._extract_game_mode_stats(stats_dict),
+            
+            # Останній матч
+            'last_match': self._extract_last_match_stats(stats_dict)
         }
         
         return parsed
@@ -239,3 +258,113 @@ class SteamAPI:
             return len(players) > 0
         except:
             return False
+
+    def _extract_map_stats(self, stats_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """Витягти статистику по картах"""
+        maps = {}
+        
+        # Популярні карти CS2
+        map_names = [
+            'de_dust2', 'de_inferno', 'de_nuke', 'de_train', 'de_mirage',
+            'de_overpass', 'de_vertigo', 'de_cache', 'de_cbble', 'de_office'
+        ]
+        
+        for map_name in map_names:
+            wins_key = f'total_wins_map_{map_name}'
+            rounds_key = f'total_rounds_map_{map_name}'
+            
+            wins = stats_dict.get(wins_key, 0)
+            rounds = stats_dict.get(rounds_key, 0)
+            
+            if rounds > 0:
+                win_rate = round((wins / rounds) * 100, 1) if rounds > 0 else 0
+                maps[map_name] = {
+                    'name': map_name,
+                    'wins': wins,
+                    'rounds': rounds,
+                    'win_rate': win_rate
+                }
+        
+        # Сортуємо за кількістю раундів
+        sorted_maps = sorted(maps.values(), key=lambda x: x['rounds'], reverse=True)
+        return sorted_maps[:5]  # Топ-5 карт
+
+    def _extract_game_mode_stats(self, stats_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """Витягти статистику по режимах гри"""
+        modes = {}
+        
+        # Gun Game
+        gg_wins = stats_dict.get('total_gun_game_rounds_won', 0)
+        gg_rounds = stats_dict.get('total_gun_game_rounds_played', 0)
+        gg_matches_won = stats_dict.get('total_gg_matches_won', 0)
+        gg_matches_played = stats_dict.get('total_gg_matches_played', 0)
+        
+        if gg_rounds > 0:
+            modes['gun_game'] = {
+                'name': 'Gun Game',
+                'rounds_won': gg_wins,
+                'rounds_played': gg_rounds,
+                'round_win_rate': round((gg_wins / gg_rounds) * 100, 1),
+                'matches_won': gg_matches_won,
+                'matches_played': gg_matches_played,
+                'match_win_rate': round((gg_matches_won / gg_matches_played) * 100, 1) if gg_matches_played > 0 else 0
+            }
+        
+        # Progressive
+        prog_matches_won = stats_dict.get('total_progressive_matches_won', 0)
+        if prog_matches_won > 0:
+            modes['progressive'] = {
+                'name': 'Progressive',
+                'matches_won': prog_matches_won
+            }
+        
+        # TR Bomb
+        tr_matches_won = stats_dict.get('total_trbomb_matches_won', 0)
+        if tr_matches_won > 0:
+            modes['tr_bomb'] = {
+                'name': 'TR Bomb',
+                'matches_won': tr_matches_won
+            }
+        
+        return modes
+
+    def _extract_last_match_stats(self, stats_dict: Dict[str, Any]) -> Dict[str, Any]:
+        """Витягти статистику останнього матчу"""
+        last_match = {}
+        
+        # Основні показники останнього матчу
+        last_match['kills'] = stats_dict.get('last_match_kills', 0)
+        last_match['deaths'] = stats_dict.get('last_match_deaths', 0)
+        last_match['mvps'] = stats_dict.get('last_match_mvps', 0)
+        last_match['damage'] = stats_dict.get('last_match_damage', 0)
+        last_match['money_spent'] = stats_dict.get('last_match_money_spent', 0)
+        last_match['rounds'] = stats_dict.get('last_match_rounds', 0)
+        last_match['contribution_score'] = stats_dict.get('last_match_contribution_score', 0)
+        
+        # Результат матчу
+        t_wins = stats_dict.get('last_match_t_wins', 0)
+        ct_wins = stats_dict.get('last_match_ct_wins', 0)
+        total_wins = stats_dict.get('last_match_wins', 0)
+        
+        if t_wins > 0 or ct_wins > 0:
+            last_match['t_wins'] = t_wins
+            last_match['ct_wins'] = ct_wins
+            last_match['total_wins'] = total_wins
+            last_match['result'] = 'Перемога' if total_wins > 0 else 'Поразка'
+        
+        # Улюблена зброя останнього матчу
+        fav_weapon_id = stats_dict.get('last_match_favweapon_id', 0)
+        fav_weapon_shots = stats_dict.get('last_match_favweapon_shots', 0)
+        fav_weapon_hits = stats_dict.get('last_match_favweapon_hits', 0)
+        fav_weapon_kills = stats_dict.get('last_match_favweapon_kills', 0)
+        
+        if fav_weapon_id > 0:
+            last_match['favorite_weapon'] = {
+                'id': fav_weapon_id,
+                'shots': fav_weapon_shots,
+                'hits': fav_weapon_hits,
+                'kills': fav_weapon_kills,
+                'accuracy': round((fav_weapon_hits / fav_weapon_shots) * 100, 1) if fav_weapon_shots > 0 else 0
+            }
+        
+        return last_match

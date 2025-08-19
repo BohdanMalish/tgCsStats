@@ -248,11 +248,11 @@ class BotHandlers:
 🎯 **Точність і стрільба:**
 • Headshot %: **{stats['headshot_percent']}%** ({stats['headshot_kills']}/{stats['kills']})
 • Загальна точність: **{stats['accuracy_percent']}%**
-• Пострілів: **{stats['shots_fired']}** | Влучень: **{stats['shots_hit']}**
+• Пострілів: **{stats['shots_fired']:,}** | Влучень: **{stats['shots_hit']:,}**
 
 🏆 **Досягнення:**
 • MVP раундів: **{stats['mvps']}** ({stats['mvp_percent']}%)
-• Урон за матч: **{stats['damage_per_match']}**
+• Урон за матч: **{stats['damage_per_match']:,}**
 • Загальний урон: **{stats['damage_dealt']:,}**
 
 ⚔️ **Додатково:**
@@ -260,6 +260,15 @@ class BotHandlers:
 • Ножових вбивств: **{stats['knife_kills']}**
 • Бомб встановлено: **{stats['planted_bombs']}**
 • Бомб розміновано: **{stats['defused_bombs']}**
+
+🔥 **Нова детальна інформація:**
+• Домінації: **{stats['dominations']}** | Помсти: **{stats['revenges']}**
+• Вбивств зброєю ворога: **{stats['enemy_weapon_kills']}**
+• Вбивств осліплених: **{stats['blinded_kills']}**
+• Ножових дуелей: **{stats['knife_fight_kills']}**
+• Вбивств зум-снайперів: **{stats['zoomed_sniper_kills']}**
+• Зброї подаровано: **{stats['weapons_donated']}**
+• Contribution Score: **{stats['contribution_score']:,}**
 
 ⚡ **Impact Score: {impact_score}/100**
 """
@@ -272,6 +281,36 @@ class BotHandlers:
                     if weapon['accuracy'] > 0:
                         detailed_text += f" ({weapon['accuracy']}% точність)"
                     detailed_text += "\n"
+            
+            # Додаємо статистику по картах
+            if stats.get('map_stats'):
+                detailed_text += "\n🗺️ **Топ карти:**\n"
+                for i, map_stat in enumerate(stats['map_stats'][:3], 1):
+                    detailed_text += f"{i}. **{map_stat['name']}**: {map_stat['wins']}W/{map_stat['rounds']}R ({map_stat['win_rate']}%)\n"
+            
+            # Додаємо статистику по режимах гри
+            if stats.get('game_mode_stats'):
+                detailed_text += "\n🎮 **Режими гри:**\n"
+                for mode_name, mode_data in stats['game_mode_stats'].items():
+                    if mode_name == 'gun_game':
+                        detailed_text += f"• **Gun Game**: {mode_data['rounds_won']}W/{mode_data['rounds_played']}R ({mode_data['round_win_rate']}%)\n"
+                    elif mode_name == 'progressive':
+                        detailed_text += f"• **Progressive**: {mode_data['matches_won']} перемог\n"
+                    elif mode_name == 'tr_bomb':
+                        detailed_text += f"• **TR Bomb**: {mode_data['matches_won']} перемог\n"
+            
+            # Додаємо інформацію про останній матч
+            if stats.get('last_match') and stats['last_match'].get('kills', 0) > 0:
+                last_match = stats['last_match']
+                detailed_text += f"\n🎯 **Останній матч:**\n"
+                detailed_text += f"• K/D: **{last_match['kills']}/{last_match['deaths']}**\n"
+                detailed_text += f"• MVP: **{last_match['mvps']}**\n"
+                detailed_text += f"• Урон: **{last_match['damage']:,}**\n"
+                detailed_text += f"• Contribution: **{last_match['contribution_score']}**\n"
+                
+                if last_match.get('favorite_weapon'):
+                    weapon = last_match['favorite_weapon']
+                    detailed_text += f"• Улюблена зброя: **{weapon['kills']}** вбивств ({weapon['accuracy']}% точність)\n"
             
             await update.message.reply_text(detailed_text, parse_mode='Markdown')
             

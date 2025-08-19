@@ -16,16 +16,20 @@ from src.handlers.bot_handlers import BotHandlers
 # Конфігурація
 import os
 
-# Спочатку пробуємо завантажити з config.py, потім з змінних оточення
-try:
-    from config import *
-except ImportError:
-    # Використовуємо змінні оточення (для Docker)
-    TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "YOUR_BOT_TOKEN")
-    STEAM_API_KEY = os.getenv("STEAM_API_KEY", "YOUR_STEAM_API_KEY")
-    DATABASE_PATH = os.getenv("DATABASE_PATH", "./data/bot_database.db")
-    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
-    DAILY_REPORT_TIME = os.getenv("DAILY_REPORT_TIME", "10:00")
+# Завжди використовуємо змінні оточення (для Railway/Docker)
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+STEAM_API_KEY = os.getenv("STEAM_API_KEY")
+DATABASE_PATH = os.getenv("DATABASE_PATH", "/app/data/bot_database.db")
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+DAILY_REPORT_TIME = os.getenv("DAILY_REPORT_TIME", "10:00")
+
+# Fallback для локальної розробки
+if not TELEGRAM_BOT_TOKEN:
+    try:
+        from config import TELEGRAM_BOT_TOKEN, STEAM_API_KEY
+    except ImportError:
+        TELEGRAM_BOT_TOKEN = "YOUR_BOT_TOKEN"
+        STEAM_API_KEY = "YOUR_STEAM_API_KEY"
 
 
 def setup_logging():

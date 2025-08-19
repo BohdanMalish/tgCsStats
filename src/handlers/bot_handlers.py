@@ -289,9 +289,9 @@ class BotHandlers:
 /week_stats - тижнева статистика  
 /month_stats - місячна статистика
 
-ℹ️ Примітка: Steam API надає загальну статистику. 
-Тижнева/місячна статистика показує той самий набір даних 
-з позначкою періоду для зручності.{data_warning}
+⚠️ Увага: Steam API не підтримує фільтрацію по часу.
+Всі команди показують загальну статистику за весь час гри.
+Для отримання актуальної статистики використовуй /daily_report.{data_warning}
 """
             
             await update.message.reply_text(stats_text)
@@ -764,6 +764,64 @@ class BotHandlers:
 """
         
         await update.message.reply_text(about_text, parse_mode='Markdown')
+
+    async def debug_stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обробник команди /debug_stats - показати всі доступні статистики"""
+        user_id = update.effective_user.id
+        user = self.user_db.get_user(user_id)
+        
+        if not user or not user.steam_id:
+            await update.message.reply_text(
+                "❌ Спочатку встанови свій Steam ID!\n\n"
+                "🔧 Використай команду:\n"
+                "/steam YOUR_STEAM_ID"
+            )
+            return
+        
+        await update.message.reply_text("🔍 Завантажую всі доступні статистики...")
+        
+        try:
+            # Отримуємо сирі статистики
+            raw_stats = await self.steam_api.get_player_stats(user.steam_id)
+            if not raw_stats:
+                await update.message.reply_text("❌ Не вдалося отримати статистику!")
+                return
+            
+            # Парсимо щоб отримати всі доступні поля
+            self.steam_api.parse_cs2_stats(raw_stats)
+            
+            if hasattr(self.steam_api, 'all_available_stats'):
+                stats = self.steam_api.all_available_stats
+                
+                # Формуємо список всіх статистик
+                stats_list = []
+                for key, value in sorted(stats.items()):
+                    stats_list.append(f"• {key}: {value}")
+                
+                debug_text = f"""
+🔍 Всі доступні статистики Steam API:
+
+📊 Загальна інформація:
+{chr(10).join(stats_list[:20])}
+
+📈 Всього полів: {len(stats)}
+
+ℹ️ Це всі дані, які надає Steam API для CS2.
+Вони не фільтруються по часу і показують загальну статистику за весь час гри.
+"""
+                
+                # Розбиваємо на частини якщо повідомлення занадто довге
+                if len(debug_text) > 4000:
+                    parts = [debug_text[i:i+4000] for i in range(0, len(debug_text), 4000)]
+                    for i, part in enumerate(parts):
+                        await update.message.reply_text(f"Частина {i+1}/{len(parts)}:\n{part}")
+                else:
+                    await update.message.reply_text(debug_text)
+            else:
+                await update.message.reply_text("❌ Не вдалося отримати список статистик!")
+                
+        except Exception as e:
+            await update.message.reply_text(f"❌ Помилка: {str(e)}")
 
     def extract_steam_id(self, text: str) -> Optional[str]:
         """Витягти Steam ID з тексту"""

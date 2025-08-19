@@ -103,6 +103,7 @@ def main():
     application.add_handler(CommandHandler("daily_report", bot_handlers.daily_report_command))
     application.add_handler(CommandHandler("report_settings", bot_handlers.report_settings_command))
     application.add_handler(CommandHandler("about", bot_handlers.about_command))
+    application.add_handler(CommandHandler("debug_stats", bot_handlers.debug_stats_command))
     
     # Обробник помилок
     application.add_error_handler(error_handler)

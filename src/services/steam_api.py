@@ -100,6 +100,9 @@ class SteamAPI:
         for stat in raw_stats['stats']:
             stats_dict[stat['name']] = stat['value']
         
+        # Додаємо всі доступні статистики для дебагу
+        self.all_available_stats = stats_dict
+        
         # Розрахунок основних показників
         kills = stats_dict.get('total_kills', 0)
         deaths = stats_dict.get('total_deaths', 0)

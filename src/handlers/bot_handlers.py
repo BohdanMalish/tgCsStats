@@ -28,17 +28,17 @@ class BotHandlers:
             user = User(telegram_id=user_id, username=username)
             self.user_db.create_user(user)
             
-            welcome_text = f"""
-🎮 **Вітаю в CS2 Stats Bot!**
+            welcome_text = """
+🎮 Вітаю в CS2 Stats Bot!
 
 Я допоможу тобі відстежувати статистику в Counter-Strike 2 та змагатися з друзями!
 
-🚀 **Для початку роботи:**
-1. Додай свій Steam ID командою `/steam YOUR_STEAM_ID`
-2. Додай друзів командою `/add_friend FRIEND_STEAM_ID`
-3. Переглядай статистику командою `/stats`
+🚀 Для початку роботи:
+1. Додай свій Steam ID командою /steam YOUR_STEAM_ID
+2. Додай друзів командою /add_friend FRIEND_STEAM_ID
+3. Переглядай статистику командою /stats
 
-📊 **Доступні команди:**
+📊 Доступні команди:
 /help - список всіх команд
 /steam - встановити свій Steam ID
 /stats - моя статистика
@@ -47,7 +47,7 @@ class BotHandlers:
 /friends_stats - рейтинг друзів
 /leaderboard - топ гравців
 
-🎯 **Що я вмію:**
+🎯 Що я вмію:
 • Показувати детальну статистику CS2
 • Рахувати Impact Score (власний рейтинг)
 • Порівнювати з друзями
@@ -65,7 +65,7 @@ class BotHandlers:
 🎯 Або /stats щоб подивитися свою статистику
 """
 
-        await update.message.reply_text(welcome_text, parse_mode='Markdown')
+        await update.message.reply_text(welcome_text)
 
     async def help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обробник команди /help"""
@@ -113,7 +113,7 @@ class BotHandlers:
 • MVP % (10%)
 """
         
-        await update.message.reply_text(help_text, parse_mode='Markdown')
+        await update.message.reply_text(help_text)
 
     async def steam_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обробник команди /steam для встановлення Steam ID"""

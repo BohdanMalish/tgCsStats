@@ -9,6 +9,7 @@ from typing import Optional
 from ..models.user import UserDatabase, User
 from ..services.steam_api import SteamAPI
 from ..services.daily_reports import DailyReportsService
+from ..services.steam_scraper import SteamScraper
 
 
 class BotHandlers:
@@ -822,6 +823,58 @@ class BotHandlers:
                 
         except Exception as e:
             await update.message.reply_text(f"❌ Помилка: {str(e)}")
+
+    async def web_stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обробник команди /web_stats - статистика через веб-парсинг"""
+        user_id = update.effective_user.id
+        user = self.user_db.get_user(user_id)
+        
+        if not user or not user.steam_id:
+            await update.message.reply_text(
+                "❌ Спочатку встанови свій Steam ID!\n\n"
+                "🔧 Використай команду:\n"
+                "/steam YOUR_STEAM_ID"
+            )
+            return
+        
+        await update.message.reply_text("🌐 Завантажую статистику через веб-парсинг...")
+        
+        try:
+            # Імпортуємо scraper
+            from ..services.steam_scraper import SteamScraper
+            scraper = SteamScraper()
+            
+            # Отримуємо статистику через веб-парсинг
+            web_stats = await scraper.get_profile_stats(user.steam_id)
+            
+            if web_stats:
+                # Формуємо повідомлення
+                stats_text = f"""
+🌐 Статистика через веб-парсинг для {user.steam_id}
+
+📊 Основні показники:
+• Kills: {web_stats.get('kills', 'N/A')}
+• Deaths: {web_stats.get('deaths', 'N/A')}
+• Wins: {web_stats.get('wins', 'N/A')}
+• Matches: {web_stats.get('matches', 'N/A')}
+• MVPs: {web_stats.get('mvps', 'N/A')}
+• Headshots: {web_stats.get('headshots', 'N/A')}
+• Damage: {web_stats.get('damage', 'N/A')}
+
+🔫 Зброя:
+• AK47: {web_stats.get('ak47_kills', 'N/A')}
+• M4A1: {web_stats.get('m4a1_kills', 'N/A')}
+• AWP: {web_stats.get('awp_kills', 'N/A')}
+
+ℹ️ Це дані отримані через парсинг веб-сторінки Steam.
+Може містити більше деталей ніж API.
+"""
+                await update.message.reply_text(stats_text)
+            else:
+                await update.message.reply_text("❌ Не вдалося отримати статистику через веб-парсинг!")
+                
+        except Exception as e:
+            await update.message.reply_text(f"❌ Помилка веб-парсингу: {str(e)}")
 
     def extract_steam_id(self, text: str) -> Optional[str]:
         """Витягти Steam ID з тексту"""

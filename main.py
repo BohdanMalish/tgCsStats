@@ -104,6 +104,8 @@ def main():
     application.add_handler(CommandHandler("gsi_stats", bot_handlers.gsi_stats_command))
     application.add_handler(CommandHandler("steam_login", bot_handlers.steam_login_command))
     application.add_handler(CommandHandler("steam_manual", bot_handlers.steam_manual_command))
+    application.add_handler(CommandHandler("faceit_stats", bot_handlers.faceit_stats_command))
+    application.add_handler(CommandHandler("faceit_matches", bot_handlers.faceit_matches_command))
     
     # Обробник помилок
     application.add_error_handler(error_handler)

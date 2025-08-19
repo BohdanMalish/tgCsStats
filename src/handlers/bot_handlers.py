@@ -91,6 +91,10 @@ class BotHandlers:
 /gsi_weapon - статистика зброї
 /compare `<Steam_ID>` - порівняти з гравцем
 
+🏆 **FACEIT:**
+/faceit_stats - FACEIT статистика
+/faceit_matches - останні 20 матчів FACEIT
+
 🏆 **Рейтинги:**
 /friends_stats - рейтинг моїх друзів
 /leaderboard - топ гравців серед всіх користувачів
@@ -754,6 +758,139 @@ class BotHandlers:
             )
         else:
             await update.message.reply_text("❌ Помилка збереження Steam ID. Спробуй пізніше.")
+
+    async def faceit_stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обробник команди /faceit_stats - статистика FACEIT"""
+        user_id = update.effective_user.id
+        user = self.user_db.get_user(user_id)
+        
+        if not user or not user.steam_id:
+            await update.message.reply_text(
+                "❌ Спочатку встанови свій Steam ID!\n\n"
+                "🔧 Використай команди:\n"
+                "/steam_login - авторизуватися через Steam\n"
+                "/steam_manual YOUR_STEAM_ID - встановити вручну"
+            )
+            return
+        
+        await update.message.reply_text("🏆 Завантажую FACEIT статистику...")
+        
+        try:
+            # Імпортуємо FACEIT API
+            from ..services.faceit_api import FaceitAPI
+            
+            # TODO: Отримати FACEIT API ключ з конфігурації
+            faceit_api = FaceitAPI(api_key="YOUR_FACEIT_API_KEY")
+            
+            # Отримуємо гравця за Steam ID
+            player = await faceit_api.get_player_by_steam_id(user.steam_id)
+            
+            if not player:
+                await update.message.reply_text(
+                    "❌ FACEIT профіль не знайдено!\n\n"
+                    "💡 Можливі причини:\n"
+                    "• Гравець не зареєстрований на FACEIT\n"
+                    "• Steam ID не пов'язаний з FACEIT\n"
+                    "• Профіль приватний\n\n"
+                    "🔗 Зареєструйся на: faceit.com"
+                )
+                return
+            
+            # Отримуємо статистику
+            stats_data = await faceit_api.get_player_stats(player['player_id'])
+            if not stats_data:
+                await update.message.reply_text("❌ Не вдалося отримати FACEIT статистику!")
+                return
+            
+            # Парсимо статистику
+            stats = faceit_api.parse_player_stats(stats_data)
+            
+            # Формуємо повідомлення
+            stats_text = f"""
+🏆 FACEIT статистика для {player.get('nickname', 'Невідомо')}
+
+📊 Основні показники:
+• Матчів зіграно: {stats['matches_played']}
+• Перемог: {stats['wins']} ({stats['win_rate']}%)
+• K/D Ratio: {stats['kd_ratio']}
+• Headshot %: {stats['headshot_percent']}%
+
+🎯 Середні показники:
+• Вбивств за матч: {stats['average_kills']}
+• Смертей за матч: {stats['average_deaths']}
+• Асистів за матч: {stats['average_assists']}
+• Headshot за матч: {stats['average_hs']}
+
+🔥 Серії:
+• Поточна серія перемог: {stats['current_win_streak']}
+• Найдовша серія перемог: {stats['longest_win_streak']}
+• Поточна серія поразок: {stats['current_lose_streak']}
+
+💡 Команди:
+/faceit_matches - останні 20 матчів
+/faceit_compare STEAM_ID - порівняти з гравцем
+"""
+            await update.message.reply_text(stats_text)
+            
+        except Exception as e:
+            await update.message.reply_text(f"❌ Помилка FACEIT API: {str(e)}")
+
+    async def faceit_matches_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обробник команди /faceit_matches - останні матчі FACEIT"""
+        user_id = update.effective_user.id
+        user = self.user_db.get_user(user_id)
+        
+        if not user or not user.steam_id:
+            await update.message.reply_text(
+                "❌ Спочатку встанови свій Steam ID!\n\n"
+                "🔧 Використай команди:\n"
+                "/steam_login - авторизуватися через Steam\n"
+                "/steam_manual YOUR_STEAM_ID - встановити вручну"
+            )
+            return
+        
+        await update.message.reply_text("🎮 Завантажую останні FACEIT матчі...")
+        
+        try:
+            from ..services.faceit_api import FaceitAPI
+            faceit_api = FaceitAPI(api_key="YOUR_FACEIT_API_KEY")
+            
+            # Отримуємо гравця
+            player = await faceit_api.get_player_by_steam_id(user.steam_id)
+            if not player:
+                await update.message.reply_text("❌ FACEIT профіль не знайдено!")
+                return
+            
+            # Отримуємо останні матчі
+            matches = await faceit_api.get_recent_matches(player['player_id'], limit=20)
+            if not matches:
+                await update.message.reply_text("❌ Не вдалося отримати матчі!")
+                return
+            
+            # Формуємо список матчів
+            matches_text = f"""
+🎮 Останні 20 FACEIT матчів для {player.get('nickname', 'Невідомо')}
+
+"""
+            
+            for i, match in enumerate(matches[:10], 1):  # Показуємо перші 10
+                parsed_match = faceit_api.parse_match(match)
+                result_emoji = "✅" if parsed_match['result'] == 'Victory' else "❌"
+                
+                matches_text += f"""
+{i}. {result_emoji} {parsed_match['map']} - {parsed_match['score']}
+   K/D: {parsed_match['kills']}/{parsed_match['deaths']} ({parsed_match['kd_ratio']})
+   HS: {parsed_match['headshots']} | MVP: {parsed_match['mvp']}
+   ELO: {parsed_match['elo']} ({parsed_match['elo_change']:+d})
+"""
+            
+            if len(matches) > 10:
+                matches_text += f"\n... та ще {len(matches) - 10} матчів"
+            
+            await update.message.reply_text(matches_text)
+            
+        except Exception as e:
+            await update.message.reply_text(f"❌ Помилка отримання матчів: {str(e)}")
 
     async def gsi_setup_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обробник команди /gsi_setup - налаштування CS2 GSI"""

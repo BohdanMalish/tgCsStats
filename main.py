@@ -27,9 +27,22 @@ DAILY_REPORT_TIME = os.getenv("DAILY_REPORT_TIME", "10:00")
 def get_railway_domain():
     project_name = os.getenv("RAILWAY_PROJECT_NAME", "")
     environment_name = os.getenv("RAILWAY_ENVIRONMENT_NAME", "")
+    service_name = os.getenv("RAILWAY_SERVICE_NAME", "")
+    
+    logger = logging.getLogger(__name__)
+    logger.info(f"🔍 Railway змінні:")
+    logger.info(f"   RAILWAY_PROJECT_NAME: {project_name}")
+    logger.info(f"   RAILWAY_ENVIRONMENT_NAME: {environment_name}")
+    logger.info(f"   RAILWAY_SERVICE_NAME: {service_name}")
+    
     if project_name and environment_name:
-        return f"{project_name}-{environment_name}.up.railway.app"
-    return "adorable-art-production.up.railway.app"  # Fallback
+        domain = f"{project_name}-{environment_name}.up.railway.app"
+        logger.info(f"✅ Згенерований домен: {domain}")
+        return domain
+    else:
+        fallback = "adorable-art-production.up.railway.app"
+        logger.info(f"⚠️ Використовуємо fallback домен: {fallback}")
+        return fallback
 
 APP_DOMAIN = get_railway_domain()
 PORT = int(os.getenv("PORT", "8080"))
@@ -161,11 +174,22 @@ def main():
         # Запускаємо веб-сервер якщо він створений
         if web_server:
             # Для Railway запускаємо веб-сервер як основний процес
-            # а бота в окремому потоці
+            # а бота в окремому потоці з власним event loop
             import threading
             def start_bot():
                 try:
-                    application.run_polling(allowed_updates=['message', 'callback_query'])
+                    import asyncio
+                    # Створюємо новий event loop для потоку
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    
+                    # Запускаємо бота
+                    loop.run_until_complete(application.initialize())
+                    loop.run_until_complete(application.start())
+                    loop.run_until_complete(application.updater.start_polling())
+                    
+                    # Запускаємо event loop
+                    loop.run_forever()
                 except Exception as e:
                     logger.error(f"Помилка бота: {e}")
             

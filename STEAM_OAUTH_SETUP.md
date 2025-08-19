@@ -7,7 +7,7 @@
 ### Обов'язкові:
 ```
 TELEGRAM_BOT_TOKEN=8343208198:AAE3dC1er-xa9risTj26IEA6b-A4vPGjxWQ
-APP_DOMAIN=your-app.railway.app
+APP_DOMAIN=tgcsstats-production.up.railway.app
 ```
 
 ### Опціональні:

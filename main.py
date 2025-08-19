@@ -40,7 +40,7 @@ def get_railway_domain():
         logger.info(f"✅ Згенерований домен: {domain}")
         return domain
     else:
-        fallback = "adorable-art-production.up.railway.app"
+        fallback = "tgcsstats-production.up.railway.app"  # Правильний домен
         logger.info(f"⚠️ Використовуємо fallback домен: {fallback}")
         return fallback
 

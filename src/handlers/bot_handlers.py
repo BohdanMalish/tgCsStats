@@ -111,6 +111,16 @@ class BotHandlers:
 /daily_report - отримати щоденний звіт зараз
 /report_settings - налаштування звітів
 
+🎬 **Аналіз демо:**
+/demo_analysis `<MATCH_ID>` - аналізувати демо матчу
+/demo_history - історія аналізованих матчів
+/demo_stats - статистика всіх аналізованих матчів
+
+🔄 **Автоматичний моніторинг:**
+/enable_monitoring - увімкнути автоматичний моніторинг матчів
+/disable_monitoring - вимкнути автоматичний моніторинг
+/monitoring_status - статус моніторингу
+
 ℹ️ **Інформація:**
 /about - про бота та Impact Score
 /help - ця довідка
@@ -125,6 +135,8 @@ class BotHandlers:
 `/recent_activity 7` - активність за 7 днів
 `/add_friend 76561198987654321`
 `/compare 76561198987654321`
+`/demo_analysis 12345` - аналіз демо матчу
+`/enable_monitoring` - увімкнути моніторинг
 
 🎯 **Impact Score** - це наш власний алгоритм оцінки гравця, що враховує:
 • K/D Ratio (25%)
@@ -1193,6 +1205,175 @@ class BotHandlers:
         except Exception as e:
             await update.message.reply_text(f"❌ Помилка: {str(e)}")
 
+    async def demo_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обробник команди /demo для роботи з демо-файлами"""
+        user_id = update.effective_user.id
+        user = self.user_db.get_user(user_id)
+        
+        if not user or not user.steam_id:
+            await update.message.reply_text(
+                "❌ Спочатку встанови свій Steam ID командою `/steam`",
+                parse_mode='Markdown'
+            )
+            return
+        
+        await update.message.reply_text("📊 Аналізую доступність демо-файлів...")
+        
+        try:
+            demo_analysis = await self.steam_api.get_demo_analysis(user.steam_id)
+            if not demo_analysis:
+                await update.message.reply_text("❌ Не вдалося отримати інформацію про демо!")
+                return
+            
+            demo_text = f"""
+🎬 **Демо-файли для {demo_analysis['player_name']}**
+
+📋 **Доступність:**
+• Steam Client: ✅ Доступно
+• API доступ: ❌ Недоступно
+• Останній онлайн: {demo_analysis['last_online']}
+
+🔗 **Способи завантаження:**
+
+1️⃣ **Steam Client:**
+• Відкрий Steam
+• Перейди в CS2
+• Відкрий Watch → Your Matches
+• Завантаж потрібний матч
+
+2️⃣ **Steam Community:**
+• Переглянь матчі в профілі
+• Знайди потрібний матч
+• Завантаж демо
+
+💡 **Рекомендації:**
+• Демо зберігаються локально в Steam
+• Використай CSGO Demo Manager для аналізу
+• HLTV надає додаткові інструменти
+• Демо доступні тільки для твоїх матчів
+
+⚠️ **Обмеження:**
+• Steam API не надає прямий доступ до демо
+• Демо доступні тільки через Steam Client
+• Потрібно бути учасником матчу
+"""
+            
+            await update.message.reply_text(demo_text, parse_mode='Markdown')
+            
+        except Exception as e:
+            await update.message.reply_text(f"❌ Помилка: {str(e)}")
+
+    async def match_details_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обробник команди /match_details для деталей останнього матчу"""
+        user_id = update.effective_user.id
+        user = self.user_db.get_user(user_id)
+        
+        if not user or not user.steam_id:
+            await update.message.reply_text(
+                "❌ Спочатку встанови свій Steam ID командою `/steam`",
+                parse_mode='Markdown'
+            )
+            return
+        
+        await update.message.reply_text("📊 Аналізую деталі останнього матчу...")
+        
+        try:
+            match_details = await self.steam_api.get_match_details(user.steam_id)
+            if not match_details:
+                await update.message.reply_text("❌ Не вдалося отримати деталі матчу!")
+                return
+            
+            stats = match_details['stats']
+            
+            # Розраховуємо додаткові показники
+            kd_ratio = round(stats['kills'] / stats['deaths'], 2) if stats['deaths'] > 0 else stats['kills']
+            result = "Перемога" if stats['total_wins'] > 0 else "Поразка"
+            
+            match_text = f"""
+🎮 **Деталі останнього матчу**
+👤 **Гравець:** {match_details['player_name']}
+
+📊 **Результат:**
+• Результат: **{result}**
+• K/D: **{stats['kills']}/{stats['deaths']}** ({kd_ratio})
+• MVP: **{stats['mvps']}**
+• Урон: **{stats['damage']:,}**
+• Раунди: **{stats['rounds']}**
+• Contribution: **{stats['contribution_score']}**
+
+🎯 **Рахунок:**
+• T сторона: **{stats['t_wins']}** раундів
+• CT сторона: **{stats['ct_wins']}** раундів
+• Загалом: **{stats['total_wins']}** раундів
+
+🎬 **Демо-файл:**
+• Доступний: {'✅' if match_details['demo_info']['available'] else '❌'}
+• Примітка: {match_details['demo_info']['note']}
+
+💡 **Для завантаження демо:**
+• Відкрий Steam → CS2 → Watch → Your Matches
+• Знайди цей матч і завантаж демо
+• Демо зберігається локально в Steam
+"""
+            
+            await update.message.reply_text(match_text, parse_mode='Markdown')
+            
+        except Exception as e:
+            await update.message.reply_text(f"❌ Помилка: {str(e)}")
+
+    async def demo_help_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обробник команди /demo_help для довідки по демо"""
+        help_text = """
+🎬 **Довідка по демо-файлам**
+
+📋 **Що таке демо-файли:**
+• Записи матчів CS2
+• Можна переглядати з будь-якого кута
+• Аналізувати свої помилки
+• Вивчати тактики суперників
+
+🔧 **Як завантажити демо:**
+
+1️⃣ **Через Steam Client:**
+• Відкрий Steam
+• Запусти CS2
+• Перейди в Watch → Your Matches
+• Знайди потрібний матч
+• Натисни Download
+
+2️⃣ **Через Steam Community:**
+• Відкрий свій профіль Steam
+• Перейди в Game Stats → CS2
+• Знайди матчі
+• Завантаж демо
+
+📁 **Де зберігаються демо:**
+```
+Windows: C:\Program Files (x86)\Steam\steamapps\common\Counter-Strike Global Offensive\csgo\replays
+macOS: ~/Library/Application Support/Steam/steamapps/common/Counter-Strike Global Offensive/csgo/replays
+Linux: ~/.steam/steam/steamapps/common/Counter-Strike Global Offensive/csgo/replays
+```
+
+🛠️ **Інструменти для аналізу:**
+• **CSGO Demo Manager** - найпопулярніший
+• **HLTV** - професійний аналіз
+• **Steam Watch** - вбудований плеєр
+• **GOTV** - для турнірних матчів
+
+💡 **Поради:**
+• Демо доступні тільки для твоїх матчів
+• Зберігай важливі демо
+• Аналізуй свої помилки
+• Вивчай тактики кращих гравців
+
+⚠️ **Обмеження:**
+• Steam API не надає прямий доступ
+• Потрібен Steam Client
+• Демо займають місце на диску
+"""
+        
+        await update.message.reply_text(help_text, parse_mode='Markdown')
+
 
 
     def extract_steam_id(self, text: str) -> Optional[str]:
@@ -1201,3 +1382,319 @@ class BotHandlers:
         steam_id_pattern = r'\b7656119[0-9]{10}\b'
         match = re.search(steam_id_pattern, text)
         return match.group() if match else None
+
+    async def demo_analysis_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обробник команди /demo_analysis для аналізу демо"""
+        user_id = update.effective_user.id
+        user = self.user_db.get_user(user_id)
+        
+        if not user or not user.steam_id:
+            await update.message.reply_text(
+                "❌ Спочатку встанови свій Steam ID командою `/steam`",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Перевіряємо чи є match_id
+        if not context.args:
+            await update.message.reply_text(
+                "❌ Вкажи ID матчу для аналізу!\n\n"
+                "📝 **Приклад:**\n"
+                "`/demo_analysis match_12345`\n\n"
+                "💡 **Як отримати ID матчу:**\n"
+                "• З Steam Client після матчу\n"
+                "• З профілю Steam в розділі матчів",
+                parse_mode='Markdown'
+            )
+            return
+        
+        match_id = context.args[0]
+        
+        await update.message.reply_text(f"🎮 Аналізую демо матчу {match_id}...")
+        
+        try:
+            # Імпортуємо DemoAnalyzer
+            from src.services.demo_analyzer import DemoAnalyzer
+            demo_analyzer = DemoAnalyzer(self.steam_api.api_key)
+            
+            # Завантажуємо демо
+            demo_path = await demo_analyzer.download_demo(user.steam_id, match_id)
+            if not demo_path:
+                await update.message.reply_text("❌ Не вдалося завантажити демо-файл!")
+                return
+            
+            # Аналізуємо демо
+            analysis_result = await demo_analyzer.analyze_demo(demo_path, user.steam_id, match_id)
+            if not analysis_result:
+                await update.message.reply_text("❌ Помилка аналізу демо!")
+                return
+            
+            # Зберігаємо аналіз в базі даних
+            from src.models.user import MatchAnalysis
+            match_analysis = MatchAnalysis(
+                steam_id=user.steam_id,
+                match_id=match_id,
+                match_date=datetime.now(),
+                demo_path=demo_path
+            )
+            match_analysis.analyzed = True
+            match_analysis.analysis_data = analysis_result
+            
+            self.user_db.save_match_analysis(match_analysis)
+            
+            # Створюємо звіт
+            summary = await demo_analyzer.get_analysis_summary(analysis_result)
+            
+            # Видаляємо демо-файл
+            await demo_analyzer.cleanup_demo(demo_path)
+            
+            await update.message.reply_text(summary, parse_mode='Markdown')
+            
+        except Exception as e:
+            await update.message.reply_text(f"❌ Помилка: {str(e)}")
+
+    async def demo_history_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обробник команди /demo_history для історії аналізованих матчів"""
+        user_id = update.effective_user.id
+        user = self.user_db.get_user(user_id)
+        
+        if not user or not user.steam_id:
+            await update.message.reply_text(
+                "❌ Спочатку встанови свій Steam ID командою `/steam`",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Перевіряємо кількість матчів для показу
+        limit = 10
+        if context.args:
+            try:
+                limit = int(context.args[0])
+                if limit < 1 or limit > 50:
+                    limit = 10
+            except ValueError:
+                limit = 10
+        
+        await update.message.reply_text(f"📊 Завантажую історію аналізованих матчів...")
+        
+        try:
+            # Отримуємо останні аналізовані матчі
+            recent_matches = self.user_db.get_recent_matches(user.steam_id, limit)
+            
+            if not recent_matches:
+                await update.message.reply_text(
+                    "📝 **Історія аналізованих матчів порожня**\n\n"
+                    "💡 **Щоб додати матч:**\n"
+                    "`/demo_analysis match_id` - аналізувати демо матчу\n\n"
+                    "🎮 **Приклад:**\n"
+                    "`/demo_analysis match_12345`",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            # Створюємо список матчів
+            history_text = f"📊 **Історія аналізованих матчів** ({len(recent_matches)})\n\n"
+            
+            for i, match in enumerate(recent_matches, 1):
+                match_date = match.match_date.strftime('%d.%m.%Y %H:%M')
+                analyzed_status = "✅" if match.analyzed else "⏳"
+                
+                history_text += f"{i}. {analyzed_status} **{match.match_id}**\n"
+                history_text += f"   📅 {match_date}\n"
+                
+                if match.analyzed and match.analysis_data:
+                    analysis = match.analysis_data
+                    if 'match_info' in analysis:
+                        map_name = analysis['match_info'].get('map', 'Невідомо')
+                        win_rate = analysis['match_info'].get('win_rate', 0)
+                        history_text += f"   🗺️ {map_name} | Win Rate: {win_rate}%\n"
+                    
+                    if 'player_stats' in analysis:
+                        stats = analysis['player_stats']
+                        kd = stats.get('kd_ratio', 0)
+                        kills = stats.get('kills', 0)
+                        deaths = stats.get('deaths', 0)
+                        history_text += f"   🎯 K/D: {kd} ({kills}/{deaths})\n"
+                
+                history_text += "\n"
+            
+            history_text += f"💡 Використай `/demo_analysis match_id` для аналізу нового матчу"
+            
+            await update.message.reply_text(history_text, parse_mode='Markdown')
+            
+        except Exception as e:
+            await update.message.reply_text(f"❌ Помилка: {str(e)}")
+
+    async def demo_stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обробник команди /demo_stats для статистики з аналізованих матчів"""
+        user_id = update.effective_user.id
+        user = self.user_db.get_user(user_id)
+        
+        if not user or not user.steam_id:
+            await update.message.reply_text(
+                "❌ Спочатку встанови свій Steam ID командою `/steam`",
+                parse_mode='Markdown'
+            )
+            return
+        
+        await update.message.reply_text("📊 Аналізую статистику з демо...")
+        
+        try:
+            # Отримуємо всі аналізовані матчі
+            all_matches = self.user_db.get_recent_matches(user.steam_id, 100)
+            analyzed_matches = [m for m in all_matches if m.analyzed and m.analysis_data]
+            
+            if not analyzed_matches:
+                await update.message.reply_text(
+                    "📝 **Немає аналізованих матчів**\n\n"
+                    "💡 Спочатку проаналізуй кілька матчів:\n"
+                    "`/demo_analysis match_id`",
+                    parse_mode='Markdown'
+                )
+                return
+            
+            # Розраховуємо загальну статистику
+            total_kills = 0
+            total_deaths = 0
+            total_mvps = 0
+            total_headshots = 0
+            total_damage = 0
+            total_rounds = 0
+            total_wins = 0
+            weapon_stats = {}
+            map_stats = {}
+            
+            for match in analyzed_matches:
+                analysis = match.analysis_data
+                
+                if 'player_stats' in analysis:
+                    stats = analysis['player_stats']
+                    total_kills += stats.get('kills', 0)
+                    total_deaths += stats.get('deaths', 0)
+                    total_mvps += stats.get('mvps', 0)
+                    total_headshots += stats.get('headshots', 0)
+                    total_damage += stats.get('damage_dealt', 0)
+                
+                if 'match_info' in analysis:
+                    match_info = analysis['match_info']
+                    total_rounds += match_info.get('rounds_played', 0)
+                    total_wins += match_info.get('rounds_won', 0)
+                    
+                    map_name = match_info.get('map', 'Невідомо')
+                    if map_name not in map_stats:
+                        map_stats[map_name] = {'rounds': 0, 'wins': 0}
+                    map_stats[map_name]['rounds'] += match_info.get('rounds_played', 0)
+                    map_stats[map_name]['wins'] += match_info.get('rounds_won', 0)
+                
+                if 'weapon_stats' in analysis:
+                    for weapon, stats in analysis['weapon_stats'].items():
+                        if weapon not in weapon_stats:
+                            weapon_stats[weapon] = {'kills': 0, 'accuracy': 0, 'count': 0}
+                        weapon_stats[weapon]['kills'] += stats.get('kills', 0)
+                        weapon_stats[weapon]['accuracy'] += stats.get('accuracy', 0)
+                        weapon_stats[weapon]['count'] += 1
+            
+            # Розраховуємо середні показники
+            matches_count = len(analyzed_matches)
+            avg_kd = round(total_kills / max(total_deaths, 1), 2)
+            avg_headshot = round((total_headshots / max(total_kills, 1)) * 100, 1)
+            avg_damage = round(total_damage / matches_count, 0)
+            win_rate = round((total_wins / max(total_rounds, 1)) * 100, 1)
+            
+            # Створюємо звіт
+            stats_text = f"""
+📊 **Статистика з {matches_count} аналізованих матчів**
+
+🎯 **Загальні показники:**
+• Матчів аналізовано: **{matches_count}**
+• Загальний K/D: **{avg_kd}** ({total_kills}/{total_deaths})
+• Headshot %: **{avg_headshot}%**
+• MVP: **{total_mvps}**
+• Урон за матч: **{avg_damage:,}**
+• Win Rate: **{win_rate}%**
+
+🗺️ **Топ картини:**
+"""
+            
+            # Сортуємо картини за кількістю раундів
+            sorted_maps = sorted(map_stats.items(), key=lambda x: x[1]['rounds'], reverse=True)
+            for i, (map_name, stats) in enumerate(sorted_maps[:3], 1):
+                map_win_rate = round((stats['wins'] / max(stats['rounds'], 1)) * 100, 1)
+                stats_text += f"{i}. **{map_name}**: {stats['rounds']} раундів ({map_win_rate}%)\n"
+            
+            stats_text += "\n🔫 **Топ зброя:**\n"
+            
+            # Сортуємо зброю за кількістю вбивств
+            sorted_weapons = sorted(weapon_stats.items(), key=lambda x: x[1]['kills'], reverse=True)
+            for i, (weapon, stats) in enumerate(sorted_weapons[:3], 1):
+                avg_accuracy = round(stats['accuracy'] / max(stats['count'], 1), 1)
+                stats_text += f"{i}. **{weapon}**: {stats['kills']} вбивств ({avg_accuracy}% точність)\n"
+            
+            stats_text += f"\n💡 Використай `/demo_history` для перегляду всіх матчів"
+            
+            await update.message.reply_text(stats_text, parse_mode='Markdown')
+            
+        except Exception as e:
+            await update.message.reply_text(f"❌ Помилка: {str(e)}")
+
+    async def enable_monitoring_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обробник команди /enable_monitoring для увімкнення автоматичного моніторингу"""
+        user_id = update.effective_user.id
+        user = self.user_db.get_user(user_id)
+        
+        if not user or not user.steam_id:
+            await update.message.reply_text("❌ Спочатку увійдіть через Steam: /steam_login")
+            return
+        
+        # Оновлюємо статус моніторингу в базі даних
+        user.monitoring_enabled = True
+        self.user_db.update_user(user)
+        
+        await update.message.reply_text(
+            "✅ **Автоматичний моніторинг увімкнено!**\n\n"
+            "🎮 Тепер ви будете отримувати повідомлення після кожного завершеного матчу\n"
+            "📊 Кожен матч буде автоматично проаналізовано\n"
+            "🗑️ Демо-файли будуть видалені після аналізу\n\n"
+            "💡 Використайте `/disable_monitoring` для вимкнення"
+        )
+    
+    async def disable_monitoring_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обробник команди /disable_monitoring для вимкнення автоматичного моніторингу"""
+        user_id = update.effective_user.id
+        user = self.user_db.get_user(user_id)
+        
+        if not user or not user.steam_id:
+            await update.message.reply_text("❌ Спочатку увійдіть через Steam: /steam_login")
+            return
+        
+        # Оновлюємо статус моніторингу в базі даних
+        user.monitoring_enabled = False
+        self.user_db.update_user(user)
+        
+        await update.message.reply_text(
+            "❌ **Автоматичний моніторинг вимкнено!**\n\n"
+            "🎮 Ви більше не будете отримувати автоматичні повідомлення\n"
+            "💡 Використайте `/enable_monitoring` для повторного увімкнення"
+        )
+    
+    async def monitoring_status_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обробник команди /monitoring_status для перевірки статусу моніторингу"""
+        user_id = update.effective_user.id
+        user = self.user_db.get_user(user_id)
+        
+        if not user or not user.steam_id:
+            await update.message.reply_text("❌ Спочатку увійдіть через Steam: /steam_login")
+            return
+        
+        status = "✅ Увімкнено" if getattr(user, 'monitoring_enabled', False) else "❌ Вимкнено"
+        
+        await update.message.reply_text(
+            f"📊 **Статус автоматичного моніторингу:** {status}\n\n"
+            f"🎮 Steam ID: `{user.steam_id}`\n"
+            f"⏰ Перевірка кожні 5 хвилин\n"
+            f"📱 Повідомлення: {'Так' if getattr(user, 'monitoring_enabled', False) else 'Ні'}\n"
+            f"🎬 Аналіз демо: {'Так' if getattr(user, 'monitoring_enabled', False) else 'Ні'}\n\n"
+            f"💡 Команди:\n"
+            f"• `/enable_monitoring` - увімкнути\n"
+            f"• `/disable_monitoring` - вимкнути"
+        )

@@ -142,6 +142,16 @@ def main():
     application.add_handler(CommandHandler("time_stats", bot_handlers.time_stats_command))
     application.add_handler(CommandHandler("last_matches", bot_handlers.last_matches_command))
     
+    # Команди для роботи з демо
+    application.add_handler(CommandHandler("demo_analysis", bot_handlers.demo_analysis_command))
+    application.add_handler(CommandHandler("demo_history", bot_handlers.demo_history_command))
+    application.add_handler(CommandHandler("demo_stats", bot_handlers.demo_stats_command))
+
+    # Команди для автоматичного моніторингу
+    application.add_handler(CommandHandler("enable_monitoring", bot_handlers.enable_monitoring_command))
+    application.add_handler(CommandHandler("disable_monitoring", bot_handlers.disable_monitoring_command))
+    application.add_handler(CommandHandler("monitoring_status", bot_handlers.monitoring_status_command))
+    
     # Обробник помилок
     application.add_error_handler(error_handler)
     

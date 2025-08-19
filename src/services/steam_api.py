@@ -599,3 +599,157 @@ class SteamAPI:
             }
         
         return last_match
+
+    async def get_demo_files(self, steam_id: str, limit: int = 10) -> Optional[Dict[str, Any]]:
+        """
+        Отримати список демо-файлів гравця
+        
+        Args:
+            steam_id: Steam ID гравця
+            limit: Кількість демо для отримання
+        """
+        try:
+            # Steam API для демо-файлів
+            url = f"{self.base_url}/ISteamUserOAuth/GetUserGameStatsSchema/v0001/"
+            params = {
+                'key': self.api_key,
+                'steamid': steam_id,
+                'appid': self.cs2_app_id
+            }
+            
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        return self._parse_demo_data(data, steam_id, limit)
+            return None
+        except Exception as e:
+            print(f"Помилка отримання демо-файлів: {e}")
+            return None
+
+    def _parse_demo_data(self, data: Dict[str, Any], steam_id: str, limit: int) -> Dict[str, Any]:
+        """Парсинг даних демо-файлів"""
+        try:
+            # На жаль, Steam API не надає прямий доступ до демо-файлів
+            # Але ми можемо використати альтернативні методи
+            
+            return {
+                'steam_id': steam_id,
+                'demos_available': False,
+                'note': "Steam API не надає прямий доступ до демо-файлів",
+                'alternatives': [
+                    "Використайте Steam Client для завантаження демо",
+                    "Демо зберігаються локально в Steam",
+                    "Можна використати сторонні сервіси для аналізу"
+                ],
+                'steam_demo_path': f"steam://rungame/730/76561202255233023/+csgo_download_match%20{steam_id}",
+                'manual_download': f"https://steamcommunity.com/profiles/{steam_id}/gcpd/730"
+            }
+        except Exception as e:
+            print(f"Помилка парсингу демо-даних: {e}")
+            return None
+
+    async def get_match_details(self, steam_id: str, match_id: str = None) -> Optional[Dict[str, Any]]:
+        """
+        Отримати деталі матчу (якщо доступно)
+        
+        Args:
+            steam_id: Steam ID гравця
+            match_id: ID матчу (опціонально)
+        """
+        try:
+            # Отримуємо статистику останнього матчу
+            last_match_stats = await self.get_player_stats(steam_id, "last_match")
+            if not last_match_stats:
+                return None
+            
+            # Парсимо статистику останнього матчу
+            stats_dict = {}
+            for stat in last_match_stats.get('stats', []):
+                stats_dict[stat['name']] = stat['value']
+            
+            # Отримуємо інформацію про гравця
+            players = await self.get_player_summaries([steam_id])
+            player_name = players[0].get('personaname', 'Невідомо') if players else 'Невідомо'
+            
+            match_details = {
+                'player_name': player_name,
+                'steam_id': steam_id,
+                'match_type': 'last_match',
+                'stats': {
+                    'kills': stats_dict.get('last_match_kills', 0),
+                    'deaths': stats_dict.get('last_match_deaths', 0),
+                    'mvps': stats_dict.get('last_match_mvps', 0),
+                    'damage': stats_dict.get('last_match_damage', 0),
+                    'rounds': stats_dict.get('last_match_rounds', 0),
+                    'contribution_score': stats_dict.get('last_match_contribution_score', 0),
+                    't_wins': stats_dict.get('last_match_t_wins', 0),
+                    'ct_wins': stats_dict.get('last_match_ct_wins', 0),
+                    'total_wins': stats_dict.get('last_match_wins', 0)
+                },
+                'demo_info': {
+                    'available': False,
+                    'note': "Демо-файли доступні через Steam Client",
+                    'download_url': f"steam://rungame/730/76561202255233023/+csgo_download_match%20{steam_id}",
+                    'manual_url': f"https://steamcommunity.com/profiles/{steam_id}/gcpd/730"
+                }
+            }
+            
+            return match_details
+            
+        except Exception as e:
+            print(f"Помилка отримання деталей матчу: {e}")
+            return None
+
+    async def get_demo_analysis(self, steam_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Аналіз доступності демо-файлів
+        
+        Args:
+            steam_id: Steam ID гравця
+        """
+        try:
+            # Отримуємо інформацію про гравця
+            players = await self.get_player_summaries([steam_id])
+            if not players:
+                return None
+            
+            player = players[0]
+            
+            # Отримуємо останню активність
+            activity = await self.get_recent_activity(steam_id, 7)
+            
+            analysis = {
+                'player_name': player.get('personaname', 'Невідомо'),
+                'steam_id': steam_id,
+                'profile_url': player.get('profileurl', ''),
+                'last_online': activity.get('last_online', 'Невідомо') if activity else 'Невідомо',
+                'demo_access': {
+                    'steam_client': True,
+                    'api_access': False,
+                    'note': "Демо-файли доступні тільки через Steam Client"
+                },
+                'download_methods': [
+                    {
+                        'name': 'Steam Client',
+                        'description': 'Відкрити Steam і завантажити демо',
+                        'url': f"steam://rungame/730/76561202255233023/+csgo_download_match%20{steam_id}"
+                    },
+                    {
+                        'name': 'Steam Community',
+                        'description': 'Переглянути матчі в профілі',
+                        'url': f"https://steamcommunity.com/profiles/{steam_id}/gcpd/730"
+                    }
+                ],
+                'recommendations': [
+                    "Використайте Steam Client для завантаження демо",
+                    "Демо зберігаються в папці Steam/steamapps/common/Counter-Strike Global Offensive/csgo/replays",
+                    "Для аналізу демо використайте спеціальні інструменти (HLTV, CSGO Demo Manager)"
+                ]
+            }
+            
+            return analysis
+            
+        except Exception as e:
+            print(f"Помилка аналізу демо: {e}")
+            return None

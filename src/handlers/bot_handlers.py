@@ -83,11 +83,11 @@ class BotHandlers:
 /friends - список моїх друзів
 
 📊 **Статистика:**
-/stats - загальна статистика
-/week_stats - тижнева статистика
-/month_stats - місячна статистика
-/detailed_stats - детальна статистика з Impact Score
-/weapon_stats - статистика по зброї
+/stats - CS2 GSI статистика
+/gsi_setup - налаштування GSI
+/gsi_live - статистика в реальному часі
+/gsi_match - інформація про матч
+/gsi_weapon - статистика зброї
 /compare `<Steam_ID>` - порівняти з гравцем
 
 🏆 **Рейтинги:**
@@ -196,109 +196,24 @@ class BotHandlers:
             await update.message.reply_text("❌ Помилка збереження Steam ID. Спробуй пізніше.")
 
     async def stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Обробник команди /stats (загальна статистика)"""
-        await self._get_stats(update, context, "all")
-    
-    async def week_stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Обробник команди /week_stats (тижнева статистика)"""
-        await self._get_stats(update, context, "week")
-    
-    async def month_stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Обробник команди /month_stats (місячна статистика)"""
-        await self._get_stats(update, context, "month")
-    
-    async def _get_stats(self, update: Update, context: ContextTypes.DEFAULT_TYPE, time_period: str = "all"):
-        """Загальний метод для отримання статистики"""
-        user_id = update.effective_user.id
-        user = self.user_db.get_user(user_id)
-        
-        if not user or not user.steam_id:
-            await update.message.reply_text(
-                "❌ Спочатку встанови свій Steam ID!\n\n"
-                "🔧 Використай команду:\n"
-                "/steam YOUR_STEAM_ID"
-            )
-            return
-        
-        # Визначаємо назву періоду
-        period_names = {
-            "all": "загальна",
-            "week": "тижнева", 
-            "month": "місячна"
-        }
-        period_name = period_names.get(time_period, "загальна")
-        
-        # Показуємо індикатор завантаження
-        await update.message.reply_text(f"📊 Завантажую {period_name} статистику...")
-        
-        try:
-            # Отримуємо статистику
-            raw_stats = await self.steam_api.get_player_stats(user.steam_id, time_period)
-            if not raw_stats:
-                await update.message.reply_text(
-                    "❌ Не вдалося отримати статистику!\n\n"
-                    "🔒 Можливі причини:\n"
-                    "• Профіль Steam приватний\n"
-                    "• Ще не грав у CS2\n"
-                    "• Тимчасові проблеми з Steam API"
-                )
-                return
-            
-            # Парсимо статистику
-            stats = self.steam_api.parse_cs2_stats(raw_stats)
-            if not stats:
-                await update.message.reply_text("❌ Не вдалося обробити статистику!")
-                return
-            
-            # Отримуємо інформацію про гравця
-            players = await self.steam_api.get_player_summaries([user.steam_id])
-            player_name = players[0].get('personaname', 'Невідомо') if players else 'Невідомо'
-            
-            # Розраховуємо Impact Score
-            impact_score = self.steam_api.calculate_impact_score(stats)
-            
-            # Перевіряємо на дивні дані
-            data_warning = ""
-            if stats['win_rate'] > 100 or stats['mvp_percent'] > 100:
-                data_warning = "\n⚠️ Увага: Деякі дані можуть бути неточними через обмеження Steam API"
-            
-            # Формуємо повідомлення
-            period_emoji = {"all": "🎮", "week": "📅", "month": "📊"}
-            emoji = period_emoji.get(time_period, "🎮")
-            
-            stats_text = f"""
-{emoji} {period_name.capitalize()} статистика для {player_name}
-
-📊 Основні показники:
-• K/D Ratio: {stats['kd_ratio']}
-• Win Rate: {stats['win_rate']}%
-• Зіграно матчів: {stats['matches_played']}
-• Перемог: {stats['wins']}
-
-🎯 Точність:
-• Headshot %: {stats['headshot_percent']}%
-• Загальна точність: {stats['accuracy_percent']}%
-
-🏆 Досягнення:
-• MVP раундів: {stats['mvps']} ({stats['mvp_percent']}%)
-• Асистів на матч: {stats['assists_per_match']}
-
-⚡ Impact Score: {impact_score}/100
-
-💡 Інші періоди:
-/stats - загальна статистика
-/week_stats - тижнева статистика  
-/month_stats - місячна статистика
-
-⚠️ Увага: Steam API не підтримує фільтрацію по часу.
-Всі команди показують загальну статистику за весь час гри.
-Для отримання актуальної статистики використовуй /daily_report.{data_warning}
-"""
-            
-            await update.message.reply_text(stats_text)
-            
-        except Exception as e:
-            await update.message.reply_text(f"❌ Помилка отримання статистики: {str(e)}")
+        """Обробник команди /stats - статистика через CS2 GSI"""
+        await update.message.reply_text(
+            "🎮 CS2 Game State Integration (GSI)\n\n"
+            "📋 Для отримання статистики:\n"
+            "1. Налаштуй GSI: /gsi_setup\n"
+            "2. Запусти CS2\n"
+            "3. Використай команди:\n"
+            "   /gsi_live - статистика в реальному часі\n"
+            "   /gsi_match - інформація про матч\n"
+            "   /gsi_weapon - статистика зброї\n\n"
+            "✅ Переваги GSI:\n"
+            "• Дані в реальному часі\n"
+            "• Нічого завантажувати не потрібно\n"
+            "• Детальна статистика по матчах\n"
+            "• Статистика по картах\n\n"
+            "🔧 Налаштування:\n"
+            "/gsi_setup - інструкції по налаштуванню"
+        )
 
     async def detailed_stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обробник команди /detailed_stats"""
@@ -766,117 +681,7 @@ class BotHandlers:
         
         await update.message.reply_text(about_text, parse_mode='Markdown')
 
-    async def debug_stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Обробник команди /debug_stats - показати всі доступні статистики"""
-        user_id = update.effective_user.id
-        user = self.user_db.get_user(user_id)
-        
-        if not user or not user.steam_id:
-            await update.message.reply_text(
-                "❌ Спочатку встанови свій Steam ID!\n\n"
-                "🔧 Використай команду:\n"
-                "/steam YOUR_STEAM_ID"
-            )
-            return
-        
-        await update.message.reply_text("🔍 Завантажую всі доступні статистики...")
-        
-        try:
-            # Отримуємо сирі статистики
-            raw_stats = await self.steam_api.get_player_stats(user.steam_id)
-            if not raw_stats:
-                await update.message.reply_text("❌ Не вдалося отримати статистику!")
-                return
-            
-            # Парсимо щоб отримати всі доступні поля
-            self.steam_api.parse_cs2_stats(raw_stats)
-            
-            if hasattr(self.steam_api, 'all_available_stats'):
-                stats = self.steam_api.all_available_stats
-                
-                # Формуємо список всіх статистик
-                stats_list = []
-                for key, value in sorted(stats.items()):
-                    stats_list.append(f"• {key}: {value}")
-                
-                debug_text = f"""
-🔍 Всі доступні статистики Steam API:
 
-📊 Загальна інформація:
-{chr(10).join(stats_list[:20])}
-
-📈 Всього полів: {len(stats)}
-
-ℹ️ Це всі дані, які надає Steam API для CS2.
-Вони не фільтруються по часу і показують загальну статистику за весь час гри.
-"""
-                
-                # Розбиваємо на частини якщо повідомлення занадто довге
-                if len(debug_text) > 4000:
-                    parts = [debug_text[i:i+4000] for i in range(0, len(debug_text), 4000)]
-                    for i, part in enumerate(parts):
-                        await update.message.reply_text(f"Частина {i+1}/{len(parts)}:\n{part}")
-                else:
-                    await update.message.reply_text(debug_text)
-            else:
-                await update.message.reply_text("❌ Не вдалося отримати список статистик!")
-                
-        except Exception as e:
-            await update.message.reply_text(f"❌ Помилка: {str(e)}")
-
-    async def web_stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Обробник команди /web_stats - статистика через веб-парсинг"""
-        user_id = update.effective_user.id
-        user = self.user_db.get_user(user_id)
-        
-        if not user or not user.steam_id:
-            await update.message.reply_text(
-                "❌ Спочатку встанови свій Steam ID!\n\n"
-                "🔧 Використай команду:\n"
-                "/steam YOUR_STEAM_ID"
-            )
-            return
-        
-        await update.message.reply_text("🌐 Завантажую статистику через веб-парсинг...")
-        
-        try:
-            # Імпортуємо scraper
-            from ..services.steam_scraper import SteamScraper
-            scraper = SteamScraper()
-            
-            # Отримуємо статистику через веб-парсинг
-            web_stats = await scraper.get_profile_stats(user.steam_id)
-            
-            print(f"🔍 Результат веб-парсингу: {web_stats}")
-            
-            if web_stats and len(web_stats) > 0:
-                # Формуємо повідомлення
-                stats_text = f"""
-🌐 Статистика через веб-парсинг для {user.steam_id}
-
-📊 Основні показники:
-• Kills: {web_stats.get('kills', 'N/A')}
-• Deaths: {web_stats.get('deaths', 'N/A')}
-• Wins: {web_stats.get('wins', 'N/A')}
-• Matches: {web_stats.get('matches', 'N/A')}
-• MVPs: {web_stats.get('mvps', 'N/A')}
-• Headshots: {web_stats.get('headshots', 'N/A')}
-• Damage: {web_stats.get('damage', 'N/A')}
-
-🔫 Зброя:
-• AK47: {web_stats.get('ak47_kills', 'N/A')}
-• M4A1: {web_stats.get('m4a1_kills', 'N/A')}
-• AWP: {web_stats.get('awp_kills', 'N/A')}
-
-ℹ️ Це дані отримані через парсинг веб-сторінки Steam.
-Може містити більше деталей ніж API.
-"""
-                await update.message.reply_text(stats_text)
-            else:
-                await update.message.reply_text("❌ Не вдалося отримати статистику через веб-парсинг!")
-                
-        except Exception as e:
-            await update.message.reply_text(f"❌ Помилка веб-парсингу: {str(e)}")
 
     async def gsi_stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Обробник команди /gsi_stats - статистика через CS2 GSI"""

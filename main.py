@@ -23,6 +23,11 @@ DATABASE_PATH = os.getenv("DATABASE_PATH", "/app/data/bot_database.db")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 DAILY_REPORT_TIME = os.getenv("DAILY_REPORT_TIME", "10:00")
 
+# Додаткова діагностика
+print(f"🔍 DEBUG: os.environ keys: {list(os.environ.keys())}")
+print(f"🔍 DEBUG: TELEGRAM_BOT_TOKEN exists: {'TELEGRAM_BOT_TOKEN' in os.environ}")
+print(f"🔍 DEBUG: STEAM_API_KEY exists: {'STEAM_API_KEY' in os.environ}")
+
 # Fallback для локальної розробки
 if not TELEGRAM_BOT_TOKEN:
     try:

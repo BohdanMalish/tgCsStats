@@ -101,7 +101,7 @@ def main():
     application.add_handler(CommandHandler("daily_report", bot_handlers.daily_report_command))
     application.add_handler(CommandHandler("report_settings", bot_handlers.report_settings_command))
     application.add_handler(CommandHandler("about", bot_handlers.about_command))
-    application.add_handler(CommandHandler("gsi_stats", bot_handlers.gsi_stats_command))
+
     application.add_handler(CommandHandler("steam_login", bot_handlers.steam_login_command))
     application.add_handler(CommandHandler("steam_manual", bot_handlers.steam_manual_command))
     application.add_handler(CommandHandler("faceit_stats", bot_handlers.faceit_stats_command))
@@ -114,9 +114,8 @@ def main():
     logger.info("   /start - початок роботи")
     logger.info("   /help - довідка")
     logger.info("   /steam - встановити Steam ID")
-    logger.info("   /stats - CS2 GSI статистика")
-    logger.info("   /gsi_setup - налаштування GSI")
-    logger.info("   /gsi_live - статистика в реальному часі")
+    logger.info("   /stats - Steam статистика")
+    logger.info("   /detailed_stats - детальна статистика")
     logger.info("   /detailed_stats - детальна статистика")
     logger.info("   /add_friend - додати друга")
     logger.info("   /remove_friend - видалити друга")
@@ -131,6 +130,14 @@ def main():
         scheduler.start(DAILY_REPORT_TIME)
     except Exception as e:
         logger.warning(f"⚠️ Не вдалося запустити планувальник: {e}")
+    
+    # Запускаємо веб-сервер для Steam OAuth
+    try:
+        from src.web_server import WebServer
+        web_server = WebServer(bot_handlers)
+        logger.info("🌐 Веб-сервер для Steam OAuth готовий")
+    except Exception as e:
+        logger.warning(f"⚠️ Не вдалося налаштувати веб-сервер: {e}")
     
     # Запускаємо бота
     try:

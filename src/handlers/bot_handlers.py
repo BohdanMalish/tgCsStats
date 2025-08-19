@@ -847,7 +847,9 @@ class BotHandlers:
             # Отримуємо статистику через веб-парсинг
             web_stats = await scraper.get_profile_stats(user.steam_id)
             
-            if web_stats:
+            print(f"🔍 Результат веб-парсингу: {web_stats}")
+            
+            if web_stats and len(web_stats) > 0:
                 # Формуємо повідомлення
                 stats_text = f"""
 🌐 Статистика через веб-парсинг для {user.steam_id}

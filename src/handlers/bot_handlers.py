@@ -17,7 +17,7 @@ class BotHandlers:
         self.user_db = user_db
         self.steam_api = steam_api
         self.daily_reports_service = daily_reports_service
-        self.app_domain = app_domain or "your-app.railway.app"
+        self.app_domain = app_domain or "tgcsstats-production.up.railway.app"
         self.steam_api_key = steam_api_key or "YOUR_STEAM_API_KEY"
 
     async def start_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):

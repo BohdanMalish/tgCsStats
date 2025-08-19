@@ -33,7 +33,7 @@ def test_config():
     try:
         # Хардкодовані значення з main.py
         STEAM_API_KEY = "6629403219DD2ADCA0D3F552F03F92A8"
-        APP_DOMAIN = "your-app.railway.app"
+        APP_DOMAIN = "tgcsstats-production.up.railway.app"
         
         # Тестуємо SteamOAuth
         steam_oauth = SteamOAuth(STEAM_API_KEY, APP_DOMAIN)

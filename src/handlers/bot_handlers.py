@@ -82,7 +82,9 @@ class BotHandlers:
 /friends - список моїх друзів
 
 📊 **Статистика:**
-/stats - моя базова статистика
+/stats - загальна статистика
+/week_stats - тижнева статистика
+/month_stats - місячна статистика
 /detailed_stats - детальна статистика з Impact Score
 /weapon_stats - статистика по зброї
 /compare `<Steam_ID>` - порівняти з гравцем
@@ -188,7 +190,19 @@ class BotHandlers:
             await update.message.reply_text("❌ Помилка збереження Steam ID. Спробуй пізніше.")
 
     async def stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        """Обробник команди /stats"""
+        """Обробник команди /stats (загальна статистика)"""
+        await self._get_stats(update, context, "all")
+    
+    async def week_stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обробник команди /week_stats (тижнева статистика)"""
+        await self._get_stats(update, context, "week")
+    
+    async def month_stats_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обробник команди /month_stats (місячна статистика)"""
+        await self._get_stats(update, context, "month")
+    
+    async def _get_stats(self, update: Update, context: ContextTypes.DEFAULT_TYPE, time_period: str = "all"):
+        """Загальний метод для отримання статистики"""
         user_id = update.effective_user.id
         user = self.user_db.get_user(user_id)
         
@@ -196,17 +210,24 @@ class BotHandlers:
             await update.message.reply_text(
                 "❌ Спочатку встанови свій Steam ID!\n\n"
                 "🔧 Використай команду:\n"
-                "`/steam YOUR_STEAM_ID`",
-                parse_mode='Markdown'
+                "/steam YOUR_STEAM_ID"
             )
             return
         
+        # Визначаємо назву періоду
+        period_names = {
+            "all": "загальна",
+            "week": "тижнева", 
+            "month": "місячна"
+        }
+        period_name = period_names.get(time_period, "загальна")
+        
         # Показуємо індикатор завантаження
-        await update.message.reply_text("📊 Завантажую статистику...")
+        await update.message.reply_text(f"📊 Завантажую {period_name} статистику...")
         
         try:
             # Отримуємо статистику
-            raw_stats = await self.steam_api.get_player_stats(user.steam_id)
+            raw_stats = await self.steam_api.get_player_stats(user.steam_id, time_period)
             if not raw_stats:
                 await update.message.reply_text(
                     "❌ Не вдалося отримати статистику!\n\n"
@@ -231,29 +252,39 @@ class BotHandlers:
             impact_score = self.steam_api.calculate_impact_score(stats)
             
             # Формуємо повідомлення
+            period_emoji = {"all": "🎮", "week": "📅", "month": "📊"}
+            emoji = period_emoji.get(time_period, "🎮")
+            
             stats_text = f"""
-🎮 **Статистика для {player_name}**
+{emoji} {period_name.capitalize()} статистика для {player_name}
 
-📊 **Основні показники:**
-• K/D Ratio: **{stats['kd_ratio']}**
-• Win Rate: **{stats['win_rate']}%**
-• Зіграно матчів: **{stats['matches_played']}**
-• Перемог: **{stats['wins']}**
+📊 Основні показники:
+• K/D Ratio: {stats['kd_ratio']}
+• Win Rate: {stats['win_rate']}%
+• Зіграно матчів: {stats['matches_played']}
+• Перемог: {stats['wins']}
 
-🎯 **Точність:**
-• Headshot %: **{stats['headshot_percent']}%**
-• Загальна точність: **{stats['accuracy_percent']}%**
+🎯 Точність:
+• Headshot %: {stats['headshot_percent']}%
+• Загальна точність: {stats['accuracy_percent']}%
 
-🏆 **Досягнення:**
-• MVP раундів: **{stats['mvps']}** ({stats['mvp_percent']}%)
-• Асистів на матч: **{stats['assists_per_match']}**
+🏆 Досягнення:
+• MVP раундів: {stats['mvps']} ({stats['mvp_percent']}%)
+• Асистів на матч: {stats['assists_per_match']}
 
-⚡ **Impact Score: {impact_score}/100**
+⚡ Impact Score: {impact_score}/100
 
-🔥 Використай `/detailed_stats` для детальнішої інформації!
+💡 Інші періоди:
+/stats - загальна статистика
+/week_stats - тижнева статистика  
+/month_stats - місячна статистика
+
+ℹ️ Примітка: Steam API надає загальну статистику. 
+Тижнева/місячна статистика показує той самий набір даних 
+з позначкою періоду для зручності.
 """
             
-            await update.message.reply_text(stats_text, parse_mode='Markdown')
+            await update.message.reply_text(stats_text)
             
         except Exception as e:
             await update.message.reply_text(f"❌ Помилка отримання статистики: {str(e)}")

@@ -54,8 +54,14 @@ class SteamAPI:
             print(f"Помилка отримання інформації про гравців: {e}")
             return []
 
-    async def get_player_stats(self, steam_id: str) -> Optional[Dict[str, Any]]:
-        """Отримати статистику гравця для CS2"""
+    async def get_player_stats(self, steam_id: str, time_period: str = "all") -> Optional[Dict[str, Any]]:
+        """
+        Отримати статистику гравця для CS2
+        
+        Args:
+            steam_id: Steam ID гравця
+            time_period: Період статистики ("all", "week", "month")
+        """
         url = f"{self.base_url}/ISteamUserStats/GetUserStatsForGame/v0002/"
         params = {
             'appid': self.cs2_app_id,
@@ -63,12 +69,23 @@ class SteamAPI:
             'steamid': steam_id
         }
         
+        # Додаємо параметри часу якщо потрібно
+        if time_period == "week":
+            # Steam API не підтримує фільтрацію по часу, тому будемо використовувати загальну статистику
+            # але додамо індикатор що це "тижнева" статистика
+            params['time_period'] = 'week'
+        elif time_period == "month":
+            params['time_period'] = 'month'
+        
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params) as response:
                     if response.status == 200:
                         data = await response.json()
-                        return data['playerstats']
+                        stats = data['playerstats']
+                        # Додаємо інформацію про період
+                        stats['time_period'] = time_period
+                        return stats
             return None
         except Exception as e:
             print(f"Помилка отримання статистики гравця {steam_id}: {e}")

@@ -6,14 +6,14 @@ services:
     container_name: cs2-stats-bot
     restart: unless-stopped
     ports:
-      - "3000:3000"  # Порт для веб-сервера Steam OAuth
+      - "8080:8080"  # Порт для веб-сервера Steam OAuth
     environment:
       # Telegram Bot Configuration
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       
       # App Configuration
-      - APP_DOMAIN=${APP_DOMAIN:-localhost:3000}
-      - PORT=3000
+      - APP_DOMAIN=${APP_DOMAIN:-localhost:8080}
+      - PORT=8080
       
       # Database Configuration
       - DATABASE_PATH=/app/data/bot_database.db

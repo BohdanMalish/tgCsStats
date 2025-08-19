@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  cs2-stats-bot:
+    build: .
+    container_name: cs2-stats-bot
+    restart: unless-stopped
+    environment:
+      # Telegram Bot Configuration
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      
+      # Steam API Configuration
+      - STEAM_API_KEY=${STEAM_API_KEY}
+      
+      # Database Configuration
+      - DATABASE_PATH=/app/data/bot_database.db
+      
+      # Logging Configuration
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      
+      # Daily reports time
+      - DAILY_REPORT_TIME=${DAILY_REPORT_TIME:-10:00}
+      
+    volumes:
+      # Зберігаємо базу даних на хості
+      - ./data:/app/data
+      
+      # Логи (опціонально)
+      - ./logs:/app/logs
+      
+    # Обмеження ресурсів
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    
+    # Перезапуск при збоях
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getMe', timeout=10)"]
+      interval: 5m
+      timeout: 10s
+      retries: 3
+      start_period: 30s

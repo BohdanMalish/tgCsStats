@@ -151,21 +151,24 @@ def main():
         
         # Запускаємо веб-сервер якщо він створений
         if web_server:
-            async def run_bot_with_web_server():
-                # Запускаємо веб-сервер в окремому завданні
-                web_server_task = asyncio.create_task(web_server.start_server())
-                logger.info(f"🌐 Веб-сервер запущено на порту {PORT}")
-                
-                # Запускаємо бота
-                bot_task = asyncio.create_task(application.run_polling(allowed_updates=['message', 'callback_query']))
-                
-                # Чекаємо на завершення обох завдань
-                await asyncio.gather(web_server_task, bot_task)
+            # Запускаємо веб-сервер в окремому потоці
+            import threading
+            def start_web_server():
+                import asyncio
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(web_server.start_server())
+                    loop.run_forever()
+                except Exception as e:
+                    logger.error(f"Помилка веб-сервера: {e}")
             
-            asyncio.run(run_bot_with_web_server())
-        else:
-            # Запускаємо тільки бота
-            application.run_polling(allowed_updates=['message', 'callback_query'])
+            web_server_thread = threading.Thread(target=start_web_server, daemon=True)
+            web_server_thread.start()
+            logger.info(f"🌐 Веб-сервер запущено на порту {PORT}")
+        
+        # Запускаємо бота в основному потоці
+        application.run_polling(allowed_updates=['message', 'callback_query'])
             
     except KeyboardInterrupt:
         logger.info("🛑 Бот зупинено користувачем")

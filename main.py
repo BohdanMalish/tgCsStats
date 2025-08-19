@@ -22,8 +22,17 @@ STEAM_API_KEY = "6629403219DD2ADCA0D3F552F03F92A8"
 DATABASE_PATH = os.getenv("DATABASE_PATH", "/app/data/bot_database.db")
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 DAILY_REPORT_TIME = os.getenv("DAILY_REPORT_TIME", "10:00")
-APP_DOMAIN = "tg-cs-stats-production.up.railway.app"  # Захардкоджений Railway домен
-PORT = int(os.getenv("PORT", "8080"))  # Railway використовує порт 8080
+
+# Автоматично визначаємо Railway домен
+def get_railway_domain():
+    project_name = os.getenv("RAILWAY_PROJECT_NAME", "")
+    environment_name = os.getenv("RAILWAY_ENVIRONMENT_NAME", "")
+    if project_name and environment_name:
+        return f"{project_name}-{environment_name}.up.railway.app"
+    return "adorable-art-production.up.railway.app"  # Fallback
+
+APP_DOMAIN = get_railway_domain()
+PORT = int(os.getenv("PORT", "8080"))
 
 print("🔧 Using hardcoded API keys for testing")
 

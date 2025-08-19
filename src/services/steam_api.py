@@ -60,7 +60,7 @@ class SteamAPI:
         
         Args:
             steam_id: Steam ID гравця
-            time_period: Період статистики ("all", "week", "month")
+            time_period: Період статистики ("all", "week", "month", "last_match")
         """
         url = f"{self.base_url}/ISteamUserStats/GetUserStatsForGame/v0002/"
         params = {
@@ -69,26 +69,120 @@ class SteamAPI:
             'steamid': steam_id
         }
         
-        # Додаємо параметри часу якщо потрібно
-        if time_period == "week":
-            # Steam API не підтримує фільтрацію по часу, тому будемо використовувати загальну статистику
-            # але додамо індикатор що це "тижнева" статистика
-            params['time_period'] = 'week'
-        elif time_period == "month":
-            params['time_period'] = 'month'
-        
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(url, params=params) as response:
                     if response.status == 200:
                         data = await response.json()
                         stats = data['playerstats']
+                        
+                        # Якщо потрібна фільтрація по часу, застосовуємо її
+                        if time_period != "all":
+                            stats = self._filter_stats_by_time(stats, time_period)
+                        
                         # Додаємо інформацію про період
                         stats['time_period'] = time_period
                         return stats
             return None
         except Exception as e:
             print(f"Помилка отримання статистики гравця {steam_id}: {e}")
+            return None
+
+    def _filter_stats_by_time(self, stats: Dict[str, Any], time_period: str) -> Dict[str, Any]:
+        """
+        Фільтрує статистику по часу
+        
+        Args:
+            stats: Сира статистика з Steam API
+            time_period: Період фільтрації
+        """
+        if time_period == "last_match":
+            return self._extract_last_match_stats_only(stats)
+        elif time_period == "week":
+            return self._extract_recent_stats(stats, days=7)
+        elif time_period == "month":
+            return self._extract_recent_stats(stats, days=30)
+        else:
+            return stats
+
+    def _extract_last_match_stats_only(self, stats: Dict[str, Any]) -> Dict[str, Any]:
+        """Витягує тільки статистику останнього матчу"""
+        filtered_stats = {'stats': [], 'achievements': stats.get('achievements', [])}
+        
+        # Витягуємо тільки статистики останнього матчу
+        last_match_stats = [
+            'last_match_kills', 'last_match_deaths', 'last_match_mvps',
+            'last_match_damage', 'last_match_money_spent', 'last_match_rounds',
+            'last_match_contribution_score', 'last_match_t_wins', 'last_match_ct_wins',
+            'last_match_wins', 'last_match_favweapon_id', 'last_match_favweapon_shots',
+            'last_match_favweapon_hits', 'last_match_favweapon_kills'
+        ]
+        
+        for stat in stats.get('stats', []):
+            if stat['name'] in last_match_stats:
+                filtered_stats['stats'].append(stat)
+        
+        return filtered_stats
+
+    def _extract_recent_stats(self, stats: Dict[str, Any], days: int) -> Dict[str, Any]:
+        """
+        Витягує статистику за останні N днів
+        Примітка: Steam API не надає точну фільтрацію по часу,
+        тому ми використовуємо приблизні методи
+        """
+        # Для тижневої/місячної статистики можемо використовувати
+        # статистики, які оновлюються частіше (наприклад, останній матч)
+        # або показувати загальну статистику з індикатором періоду
+        
+        filtered_stats = {
+            'stats': stats.get('stats', []),
+            'achievements': stats.get('achievements', []),
+            'filter_note': f"Показує загальну статистику (фільтр {days} днів не підтримується Steam API)"
+        }
+        
+        return filtered_stats
+
+    async def get_recent_activity(self, steam_id: str, days: int = 7) -> Optional[Dict[str, Any]]:
+        """
+        Отримати нещодавню активність гравця
+        
+        Args:
+            steam_id: Steam ID гравця
+            days: Кількість днів для аналізу
+        """
+        try:
+            # Отримуємо загальну статистику
+            all_stats = await self.get_player_stats(steam_id, "all")
+            if not all_stats:
+                return None
+            
+            # Витягуємо статистику останнього матчу як індикатор нещодавньої активності
+            last_match_stats = self._extract_last_match_stats_only(all_stats)
+            
+            # Отримуємо інформацію про гравця
+            players = await self.get_player_summaries([steam_id])
+            if not players:
+                return None
+            
+            player = players[0]
+            last_logoff = player.get('lastlogoff', 0)
+            
+            # Розраховуємо час останньої активності
+            from datetime import datetime
+            last_online = datetime.fromtimestamp(last_logoff)
+            now = datetime.now()
+            days_since_online = (now - last_online).days
+            
+            return {
+                'player_name': player.get('personaname', 'Невідомо'),
+                'last_online': last_online.strftime('%Y-%m-%d %H:%M:%S'),
+                'days_since_online': days_since_online,
+                'last_match_stats': last_match_stats,
+                'is_recently_active': days_since_online <= days
+            }
+            
+        except Exception as e:
+            print(f"Помилка отримання нещодавньої активності: {e}")
             return None
 
     def parse_cs2_stats(self, raw_stats: Dict[str, Any]) -> Dict[str, Any]:

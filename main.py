@@ -151,24 +151,26 @@ def main():
         
         # Запускаємо веб-сервер якщо він створений
         if web_server:
-            # Запускаємо веб-сервер в окремому потоці
+            # Для Railway запускаємо веб-сервер як основний процес
+            # а бота в окремому потоці
             import threading
-            def start_web_server():
-                import asyncio
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
+            def start_bot():
                 try:
-                    loop.run_until_complete(web_server.start_server())
-                    loop.run_forever()
+                    application.run_polling(allowed_updates=['message', 'callback_query'])
                 except Exception as e:
-                    logger.error(f"Помилка веб-сервера: {e}")
+                    logger.error(f"Помилка бота: {e}")
             
-            web_server_thread = threading.Thread(target=start_web_server, daemon=True)
-            web_server_thread.start()
-            logger.info(f"🌐 Веб-сервер запущено на порту {PORT}")
-        
-        # Запускаємо бота в основному потоці
-        application.run_polling(allowed_updates=['message', 'callback_query'])
+            # Запускаємо бота в окремому потоці
+            bot_thread = threading.Thread(target=start_bot, daemon=True)
+            bot_thread.start()
+            logger.info("🤖 Бот запущено в окремому потоці")
+            
+            # Запускаємо веб-сервер в основному потоці
+            import asyncio
+            asyncio.run(web_server.start_server())
+        else:
+            # Запускаємо тільки бота
+            application.run_polling(allowed_updates=['message', 'callback_query'])
             
     except KeyboardInterrupt:
         logger.info("🛑 Бот зупинено користувачем")

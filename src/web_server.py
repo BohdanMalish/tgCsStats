@@ -5,6 +5,7 @@ from aiohttp import web
 import logging
 from urllib.parse import parse_qs, urlparse
 from typing import Dict, Any
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -21,18 +22,36 @@ class WebServer:
         
     async def start_server(self):
         """Запустити веб-сервер"""
-        runner = web.AppRunner(self.app)
-        await runner.setup()
-        site = web.TCPSite(runner, '0.0.0.0', self.port)
-        await site.start()
-        logger.info(f"Веб-сервер запущено на порту {self.port}")
+        logger.info(f"🚀 Запускаю веб-сервер на порту {self.port}")
+        logger.info(f"🌐 Домен: {self.app_domain}")
+        logger.info(f"🔗 Callback URL: https://{self.app_domain}/steam/callback")
+        
+        try:
+            runner = web.AppRunner(self.app)
+            await runner.setup()
+            site = web.TCPSite(runner, '0.0.0.0', self.port)
+            await site.start()
+            logger.info(f"✅ Веб-сервер запущено на порту {self.port}")
+            logger.info("🌐 Доступні маршрути:")
+            logger.info("   / - головна сторінка")
+            logger.info("   /steam/callback - Steam OAuth callback")
+            
+            # Чекаємо поки сервер працює
+            while True:
+                await asyncio.sleep(1)
+                
+        except Exception as e:
+            logger.error(f"❌ Помилка запуску веб-сервера: {e}")
+            raise
         
     async def handle_root(self, request):
         """Обробка головної сторінки"""
+        logger.info(f"📄 Запит до головної сторінки: {request.url}")
         return web.Response(text="CS2 Stats Bot - Steam OAuth Callback Server")
         
     async def handle_steam_callback(self, request):
         """Обробка Steam OAuth callback"""
+        logger.info(f"🔐 Steam OAuth callback запит: {request.url}")
         try:
             # Отримуємо параметри з URL
             query_string = request.query_string

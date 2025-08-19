@@ -9,7 +9,7 @@ from typing import Optional
 from ..models.user import UserDatabase, User
 from ..services.steam_api import SteamAPI
 from ..services.daily_reports import DailyReportsService
-from ..services.steam_scraper import SteamScraper
+
 
 
 class BotHandlers:

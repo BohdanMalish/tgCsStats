@@ -61,13 +61,21 @@ def main():
     """Головна функція запуску бота"""
     logger = setup_logging()
     
+    # Діагностика змінних оточення
+    logger.info(f"🔍 Діагностика змінних оточення:")
+    logger.info(f"   TELEGRAM_BOT_TOKEN: {'✅ Встановлено' if TELEGRAM_BOT_TOKEN and TELEGRAM_BOT_TOKEN != 'YOUR_BOT_TOKEN' else '❌ Не встановлено'}")
+    logger.info(f"   STEAM_API_KEY: {'✅ Встановлено' if STEAM_API_KEY and STEAM_API_KEY != 'YOUR_STEAM_API_KEY' else '❌ Не встановлено'}")
+    logger.info(f"   DATABASE_PATH: {DATABASE_PATH}")
+    logger.info(f"   LOG_LEVEL: {LOG_LEVEL}")
+    logger.info(f"   DAILY_REPORT_TIME: {DAILY_REPORT_TIME}")
+    
     # Перевіряємо конфігурацію
-    if TELEGRAM_BOT_TOKEN == "YOUR_BOT_TOKEN":
-        logger.error("❌ Не встановлено TELEGRAM_BOT_TOKEN! Скопіюй config.example.py в config.py та налаштуй")
+    if not TELEGRAM_BOT_TOKEN or TELEGRAM_BOT_TOKEN == "YOUR_BOT_TOKEN":
+        logger.error("❌ Не встановлено TELEGRAM_BOT_TOKEN! Перевір змінні оточення в Railway")
         return
     
-    if STEAM_API_KEY == "YOUR_STEAM_API_KEY":
-        logger.error("❌ Не встановлено STEAM_API_KEY! Отримай ключ на https://steamcommunity.com/dev/apikey")
+    if not STEAM_API_KEY or STEAM_API_KEY == "YOUR_STEAM_API_KEY":
+        logger.error("❌ Не встановлено STEAM_API_KEY! Перевір змінні оточення в Railway")
         return
     
     logger.info("🚀 Запускаю CS2 Stats Bot...")

@@ -120,11 +120,25 @@ class UserDatabase:
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
-                cursor.execute('''
-                    UPDATE users SET steam_id = ? WHERE telegram_id = ?
-                ''', (steam_id, telegram_id))
+                
+                # Спочатку перевіряємо чи існує користувач
+                cursor.execute('SELECT telegram_id FROM users WHERE telegram_id = ?', (telegram_id,))
+                user_exists = cursor.fetchone()
+                
+                if user_exists:
+                    # Оновлюємо існуючого користувача
+                    cursor.execute('''
+                        UPDATE users SET steam_id = ? WHERE telegram_id = ?
+                    ''', (steam_id, telegram_id))
+                else:
+                    # Створюємо нового користувача
+                    cursor.execute('''
+                        INSERT INTO users (telegram_id, steam_id, username, created_at, friends)
+                        VALUES (?, ?, ?, datetime('now'), '[]')
+                    ''', (telegram_id, steam_id, f"user_{telegram_id}"))
+                
                 conn.commit()
-                return cursor.rowcount > 0
+                return True
         except Exception as e:
             print(f"Помилка оновлення Steam ID: {e}")
             return False

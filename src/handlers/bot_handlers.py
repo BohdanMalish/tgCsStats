@@ -173,18 +173,23 @@ class BotHandlers:
         
         player = players[0]
         
+        # Перевіряємо чи існує користувач, якщо ні - створюємо
+        user = self.user_db.get_user(user_id)
+        if not user:
+            user = User(telegram_id=user_id, username=update.effective_user.username)
+            self.user_db.create_user(user)
+        
         # Зберігаємо Steam ID
         success = self.user_db.update_steam_id(user_id, steam_id)
         if success:
             await update.message.reply_text(
-                f"✅ **Steam ID успішно встановлено!**\n\n"
-                f"👤 **Профіль:** {player.get('personaname', 'Невідомо')}\n"
-                f"🆔 **Steam ID:** `{steam_id}`\n\n"
+                f"✅ Steam ID успішно встановлено!\n\n"
+                f"👤 Профіль: {player.get('personaname', 'Невідомо')}\n"
+                f"🆔 Steam ID: {steam_id}\n\n"
                 f"🎯 Тепер ти можеш:\n"
-                f"• Переглядати статистику `/stats`\n"
-                f"• Додавати друзів `/add_friend`\n"
-                f"• Змагатися в рейтингу `/leaderboard`",
-                parse_mode='Markdown'
+                f"• Переглядати статистику /stats\n"
+                f"• Додавати друзів /add_friend\n"
+                f"• Змагатися в рейтингу /leaderboard"
             )
         else:
             await update.message.reply_text("❌ Помилка збереження Steam ID. Спробуй пізніше.")

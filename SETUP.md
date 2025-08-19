@@ -163,4 +163,4 @@ pip install -r requirements.txt
 1. Перевір цю інструкцію
 2. Подивись Issues на GitHub
 3. Створи новий Issue з описом проблеми
-4. Напиши розробнику: @your_username
+4. Напиши розробнику: @csStatisticsBot

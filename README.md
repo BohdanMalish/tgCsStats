@@ -38,8 +38,8 @@ Telegram бот для відстеження статистики Counter-Strik
 
 ```bash
 # 1. Клонуй репозиторій
-git clone https://github.com/your-username/tg-cs-stats.git
-cd tg-cs-stats
+git clone https://github.com/BohdanMalish/tgCsStats.git
+cd tgCsStats
 
 # 2. Запусти скрипт автоматичного деплою
 ./scripts/deploy.sh
@@ -49,8 +49,8 @@ cd tg-cs-stats
 
 ```bash
 # 1. Встановлення
-git clone https://github.com/your-username/tg-cs-stats.git
-cd tg-cs-stats
+git clone https://github.com/BohdanMalish/tgCsStats.git
+cd tgCsStats
 pip install -r requirements.txt
 
 # 2. Конфігурація
@@ -214,8 +214,8 @@ tg-cs-stats/
 
 ```bash
 # На сервері
-git clone https://github.com/your-username/tg-cs-stats.git
-cd tg-cs-stats
+git clone https://github.com/BohdanMalish/tgCsStats.git
+cd tgCsStats
 
 # Налаштуй змінні оточення
 cp env.example .env
@@ -280,9 +280,9 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 ## 📞 Контакти
 
-- Telegram: @your_username
-- GitHub: [your-username](https://github.com/your-username)
-- Email: your.email@example.com
+- Telegram: @csStatisticsBot
+- GitHub: [BohdanMalish](https://github.com/BohdanMalish)
+- Email: boduanko13@gmail.com
 
 ---
 

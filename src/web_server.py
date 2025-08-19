@@ -112,7 +112,7 @@ class WebServer:
         <p>Гравець: {player_name}</p>
     </div>
     <p>Тепер ти можеш використовувати всі команди бота!</p>
-    <a href="https://t.me/your_bot_username" class="button">Повернутися до бота</a>
+    <a href="https://t.me/csStatisticsBot" class="button">Повернутися до бота</a>
 </body>
 </html>
 """

@@ -60,8 +60,12 @@ class SteamAPI:
         
         Args:
             steam_id: Steam ID гравця
-            time_period: Період статистики ("all", "week", "month", "last_match")
+            time_period: Період статистики ("all", "week", "month", "last_match", "last_20_matches")
         """
+        # Спеціальна обробка для останніх N матчів
+        if time_period == "last_20_matches":
+            return await self.get_recent_matches_stats(steam_id, 20)
+        
         url = f"{self.base_url}/ISteamUserStats/GetUserStatsForGame/v0002/"
         params = {
             'appid': self.cs2_app_id,
@@ -98,6 +102,9 @@ class SteamAPI:
         """
         if time_period == "last_match":
             return self._extract_last_match_stats_only(stats)
+        elif time_period == "last_20_matches":
+            # Це буде оброблено в get_player_stats
+            return stats
         elif time_period == "week":
             return self._extract_recent_stats(stats, days=7)
         elif time_period == "month":
@@ -183,6 +190,136 @@ class SteamAPI:
             
         except Exception as e:
             print(f"Помилка отримання нещодавньої активності: {e}")
+            return None
+
+    async def get_recent_matches_stats(self, steam_id: str, matches_count: int = 20) -> Optional[Dict[str, Any]]:
+        """
+        Отримати статистику за останні N матчів
+        
+        Args:
+            steam_id: Steam ID гравця
+            matches_count: Кількість останніх матчів (за замовчуванням 20)
+        """
+        try:
+            # Отримуємо загальну статистику
+            all_stats = await self.get_player_stats(steam_id, "all")
+            if not all_stats:
+                return None
+            
+            # Отримуємо інформацію про гравця
+            players = await self.get_player_summaries([steam_id])
+            if not players:
+                return None
+            
+            player = players[0]
+            
+            # Розраховуємо приблизну статистику за останні N матчів
+            # Використовуємо пропорційний підхід на основі загальної статистики
+            stats_dict = {}
+            for stat in all_stats.get('stats', []):
+                stats_dict[stat['name']] = stat['value']
+            
+            total_matches = stats_dict.get('total_matches_played', 0)
+            if total_matches == 0:
+                return None
+            
+            # Розраховуємо коефіцієнт для останніх N матчів
+            recent_ratio = min(matches_count / total_matches, 1.0)
+            
+            # Створюємо статистику для останніх N матчів
+            recent_stats = {'stats': []}
+            
+            # Основні статистики
+            recent_stats['stats'].extend([
+                {'name': 'total_kills', 'value': int(stats_dict.get('total_kills', 0) * recent_ratio)},
+                {'name': 'total_deaths', 'value': int(stats_dict.get('total_deaths', 0) * recent_ratio)},
+                {'name': 'total_wins', 'value': int(stats_dict.get('total_wins', 0) * recent_ratio)},
+                {'name': 'total_matches_played', 'value': matches_count},
+                {'name': 'total_mvps', 'value': int(stats_dict.get('total_mvps', 0) * recent_ratio)},
+                {'name': 'total_kills_headshot', 'value': int(stats_dict.get('total_kills_headshot', 0) * recent_ratio)},
+                {'name': 'total_shots_fired', 'value': int(stats_dict.get('total_shots_fired', 0) * recent_ratio)},
+                {'name': 'total_shots_hit', 'value': int(stats_dict.get('total_shots_hit', 0) * recent_ratio)},
+                {'name': 'total_damage_done', 'value': int(stats_dict.get('total_damage_done', 0) * recent_ratio)},
+                {'name': 'total_kills_assist', 'value': int(stats_dict.get('total_kills_assist', 0) * recent_ratio)},
+                {'name': 'total_rounds_played', 'value': int(stats_dict.get('total_rounds_played', 0) * recent_ratio)},
+                {'name': 'total_planted_bombs', 'value': int(stats_dict.get('total_planted_bombs', 0) * recent_ratio)},
+                {'name': 'total_defused_bombs', 'value': int(stats_dict.get('total_defused_bombs', 0) * recent_ratio)},
+                {'name': 'total_kills_knife', 'value': int(stats_dict.get('total_kills_knife', 0) * recent_ratio)},
+                {'name': 'total_dominations', 'value': int(stats_dict.get('total_dominations', 0) * recent_ratio)},
+                {'name': 'total_revenges', 'value': int(stats_dict.get('total_revenges', 0) * recent_ratio)},
+                {'name': 'total_kills_enemy_weapon', 'value': int(stats_dict.get('total_kills_enemy_weapon', 0) * recent_ratio)},
+                {'name': 'total_kills_enemy_blinded', 'value': int(stats_dict.get('total_kills_enemy_blinded', 0) * recent_ratio)},
+                {'name': 'total_kills_knife_fight', 'value': int(stats_dict.get('total_kills_knife_fight', 0) * recent_ratio)},
+                {'name': 'total_kills_against_zoomed_sniper', 'value': int(stats_dict.get('total_kills_against_zoomed_sniper', 0) * recent_ratio)},
+                {'name': 'total_weapons_donated', 'value': int(stats_dict.get('total_weapons_donated', 0) * recent_ratio)},
+                {'name': 'total_contribution_score', 'value': int(stats_dict.get('total_contribution_score', 0) * recent_ratio)}
+            ])
+            
+            # Статистика по зброї
+            weapon_stats = [
+                'total_kills_ak47', 'total_kills_m4a1', 'total_kills_awp', 'total_kills_deagle',
+                'total_kills_glock', 'total_kills_usp_silencer', 'total_kills_fiveseven',
+                'total_kills_p250', 'total_kills_tec9', 'total_kills_elite',
+                'total_kills_famas', 'total_kills_galilar', 'total_kills_aug', 'total_kills_sg556',
+                'total_kills_ssg08', 'total_kills_g3sg1', 'total_kills_scar20',
+                'total_kills_mp9', 'total_kills_mac10', 'total_kills_mp7', 'total_kills_ump45',
+                'total_kills_p90', 'total_kills_bizon', 'total_kills_mag7', 'total_kills_nova',
+                'total_kills_sawedoff', 'total_kills_m249', 'total_kills_negev',
+                'total_kills_molotov', 'total_kills_decoy', 'total_kills_taser',
+                'total_kills_hkp2000'
+            ]
+            
+            for weapon_stat in weapon_stats:
+                if weapon_stat in stats_dict:
+                    recent_stats['stats'].append({
+                        'name': weapon_stat,
+                        'value': int(stats_dict[weapon_stat] * recent_ratio)
+                    })
+            
+            # Додаємо метадані
+            recent_stats['time_period'] = f"last_{matches_count}_matches"
+            recent_stats['matches_count'] = matches_count
+            recent_stats['total_matches'] = total_matches
+            recent_stats['calculation_method'] = "proportional_estimation"
+            recent_stats['note'] = f"Приблизна статистика за останні {matches_count} матчів (розрахована пропорційно)"
+            
+            return recent_stats
+            
+        except Exception as e:
+            print(f"Помилка отримання статистики за останні {matches_count} матчів: {e}")
+            return None
+
+    async def get_matches_history(self, steam_id: str, limit: int = 20) -> Optional[Dict[str, Any]]:
+        """
+        Отримати історію матчів (якщо доступна)
+        
+        Args:
+            steam_id: Steam ID гравця
+            limit: Кількість матчів для отримання
+        """
+        try:
+            # На жаль, Steam API не надає прямий доступ до історії матчів
+            # Це можна реалізувати через парсинг профілю або використання сторонніх API
+            
+            # Поки що повертаємо базову інформацію
+            players = await self.get_player_summaries([steam_id])
+            if not players:
+                return None
+            
+            player = players[0]
+            
+            return {
+                'player_name': player.get('personaname', 'Невідомо'),
+                'steam_id': steam_id,
+                'note': "Steam API не надає прямий доступ до історії матчів",
+                'suggestions': [
+                    "Використайте /stats last_20_matches для приблизної статистики",
+                    "Або /recent_activity для аналізу активності"
+                ]
+            }
+            
+        except Exception as e:
+            print(f"Помилка отримання історії матчів: {e}")
             return None
 
     def parse_cs2_stats(self, raw_stats: Dict[str, Any]) -> Dict[str, Any]:

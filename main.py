@@ -140,6 +140,7 @@ def main():
     # Нові команди для фільтрації по часу
     application.add_handler(CommandHandler("recent_activity", bot_handlers.recent_activity_command))
     application.add_handler(CommandHandler("time_stats", bot_handlers.time_stats_command))
+    application.add_handler(CommandHandler("last_matches", bot_handlers.last_matches_command))
     
     # Обробник помилок
     application.add_error_handler(error_handler)

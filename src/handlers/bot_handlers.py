@@ -90,12 +90,14 @@ class BotHandlers:
 /stats `week` - статистика за тиждень
 /stats `month` - статистика за місяць
 /stats `last_match` - статистика останнього матчу
+/stats `last_20_matches` - статистика за останні 20 матчів
 /detailed_stats - детальна статистика з новою інформацією
 /compare `<Steam_ID>` - порівняти з гравцем
 
 ⏰ **Фільтрація по часу:**
 /recent_activity `<дні>` - активність за останні N днів
 /time_stats - порівняння статистики за різні періоди
+/last_matches `<кількість>` - статистика за останні N матчів
 
 🏆 **FACEIT:**
 /faceit_stats - FACEIT статистика
@@ -118,6 +120,8 @@ class BotHandlers:
 `/steam nickname`
 `/stats week` - статистика за тиждень
 `/stats last_match` - останній матч
+`/stats last_20_matches` - останні 20 матчів
+`/last_matches 10` - останні 10 матчів
 `/recent_activity 7` - активність за 7 днів
 `/add_friend 76561198987654321`
 `/compare 76561198987654321`
@@ -166,7 +170,7 @@ class BotHandlers:
         time_period = "all"
         if context.args:
             period_arg = context.args[0].lower()
-            if period_arg in ["week", "month", "last_match"]:
+            if period_arg in ["week", "month", "last_match", "last_20_matches"]:
                 time_period = period_arg
         
         await update.message.reply_text(f"📊 Завантажую статистику ({time_period})...")
@@ -187,7 +191,8 @@ class BotHandlers:
                 "all": "за весь час",
                 "week": "за тиждень",
                 "month": "за місяць",
-                "last_match": "останній матч"
+                "last_match": "останній матч",
+                "last_20_matches": "останні 20 матчів"
             }.get(time_period, "за весь час")
             
             stats_text = f"""
@@ -210,6 +215,11 @@ class BotHandlers:
             # Додаємо примітку про фільтр якщо потрібно
             if time_period in ["week", "month"] and raw_stats.get('filter_note'):
                 stats_text += f"\n⚠️ *{raw_stats['filter_note']}*"
+            
+            # Додаємо примітку про останні 20 матчів
+            if time_period == "last_20_matches" and raw_stats.get('note'):
+                stats_text += f"\n📝 *{raw_stats['note']}*"
+                stats_text += f"\n📊 Розраховано на основі {raw_stats.get('total_matches', 0)} загальних матчів"
             
             await update.message.reply_text(stats_text, parse_mode='Markdown')
             
@@ -1111,6 +1121,74 @@ class BotHandlers:
 """
             
             await update.message.reply_text(comparison_text, parse_mode='Markdown')
+            
+        except Exception as e:
+            await update.message.reply_text(f"❌ Помилка: {str(e)}")
+
+    async def last_matches_command(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        """Обробник команди /last_matches для статистики за останні N матчів"""
+        user_id = update.effective_user.id
+        user = self.user_db.get_user(user_id)
+        
+        if not user or not user.steam_id:
+            await update.message.reply_text(
+                "❌ Спочатку встанови свій Steam ID командою `/steam`",
+                parse_mode='Markdown'
+            )
+            return
+        
+        # Перевіряємо кількість матчів
+        matches_count = 20
+        if context.args:
+            try:
+                matches_count = int(context.args[0])
+                if matches_count < 1 or matches_count > 100:
+                    matches_count = 20
+            except ValueError:
+                matches_count = 20
+        
+        await update.message.reply_text(f"📊 Аналізую статистику за останні {matches_count} матчів...")
+        
+        try:
+            recent_stats = await self.steam_api.get_recent_matches_stats(user.steam_id, matches_count)
+            if not recent_stats:
+                await update.message.reply_text("❌ Не вдалося отримати статистику!")
+                return
+            
+            stats = self.steam_api.parse_cs2_stats(recent_stats)
+            players = await self.steam_api.get_player_summaries([user.steam_id])
+            player_name = players[0].get('personaname', 'Невідомо') if players else 'Невідомо'
+            impact_score = self.steam_api.calculate_impact_score(stats)
+            
+            matches_text = f"""
+🎮 **Статистика за останні {matches_count} матчів**
+👤 **Гравець:** {player_name}
+
+📊 **Основні показники:**
+• K/D Ratio: **{stats['kd_ratio']}** ({stats['kills']} / {stats['deaths']})
+• Win Rate: **{stats['win_rate']}%** ({stats['wins']}/{stats['matches_played']})
+• Headshot %: **{stats['headshot_percent']}%**
+• Точність: **{stats['accuracy_percent']}%**
+
+🏆 **Досягнення:**
+• MVP: **{stats['mvps']}** ({stats['mvp_percent']}%)
+• Урон за матч: **{stats['damage_per_match']:,}**
+• Асисти за матч: **{stats['assists_per_match']}**
+
+🔥 **Додатково:**
+• Домінації: **{stats['dominations']}** | Помсти: **{stats['revenges']}**
+• Вбивств зброєю ворога: **{stats['enemy_weapon_kills']}**
+• Вбивств осліплених: **{stats['blinded_kills']}**
+• Ножових дуелей: **{stats['knife_fight_kills']}**
+• Зброї подаровано: **{stats['weapons_donated']}**
+
+⚡ **Impact Score: {impact_score}/100**
+
+📝 *{recent_stats.get('note', 'Приблизна статистика')}*
+📊 Розраховано на основі {recent_stats.get('total_matches', 0)} загальних матчів
+"""
+            
+            await update.message.reply_text(matches_text, parse_mode='Markdown')
             
         except Exception as e:
             await update.message.reply_text(f"❌ Помилка: {str(e)}")

@@ -25,24 +25,28 @@ DAILY_REPORT_TIME = os.getenv("DAILY_REPORT_TIME", "10:00")
 
 # Автоматично визначаємо Railway домен
 def get_railway_domain():
-    project_name = os.getenv("RAILWAY_PROJECT_NAME", "")
-    environment_name = os.getenv("RAILWAY_ENVIRONMENT_NAME", "")
-    service_name = os.getenv("RAILWAY_SERVICE_NAME", "")
+    # Тимчасово захардкоджуємо правильний домен
+    return "tgcsstats-production.up.railway.app"
     
-    logger = logging.getLogger(__name__)
-    logger.info(f"🔍 Railway змінні:")
-    logger.info(f"   RAILWAY_PROJECT_NAME: {project_name}")
-    logger.info(f"   RAILWAY_ENVIRONMENT_NAME: {environment_name}")
-    logger.info(f"   RAILWAY_SERVICE_NAME: {service_name}")
-    
-    if project_name and environment_name:
-        domain = f"{project_name}-{environment_name}.up.railway.app"
-        logger.info(f"✅ Згенерований домен: {domain}")
-        return domain
-    else:
-        fallback = "tgcsstats-production.up.railway.app"  # Правильний домен
-        logger.info(f"⚠️ Використовуємо fallback домен: {fallback}")
-        return fallback
+    # Старий код (закоментований)
+    # project_name = os.getenv("RAILWAY_PROJECT_NAME", "")
+    # environment_name = os.getenv("RAILWAY_ENVIRONMENT_NAME", "")
+    # service_name = os.getenv("RAILWAY_SERVICE_NAME", "")
+    # 
+    # logger = logging.getLogger(__name__)
+    # logger.info(f"🔍 Railway змінні:")
+    # logger.info(f"   RAILWAY_PROJECT_NAME: {project_name}")
+    # logger.info(f"   RAILWAY_ENVIRONMENT_NAME: {environment_name}")
+    # logger.info(f"   RAILWAY_SERVICE_NAME: {service_name}")
+    # 
+    # if project_name and environment_name:
+    #     domain = f"{project_name}-{environment_name}.up.railway.app"
+    #     logger.info(f"✅ Згенерований домен: {domain}")
+    #     return domain
+    # else:
+    #     fallback = "tgcsstats-production.up.railway.app"  # Правильний домен
+    #     logger.info(f"⚠️ Використовуємо fallback домен: {fallback}")
+    #     return fallback
 
 APP_DOMAIN = get_railway_domain()
 PORT = int(os.getenv("PORT", "8080"))
